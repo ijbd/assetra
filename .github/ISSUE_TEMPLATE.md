@@ -1,7 +1,6 @@
 * Python Power System Reliability Package version:
 * Python version:
 * Operating System:
-* Type [Issue/Documentation/Feature]
 
 ### Description
 
