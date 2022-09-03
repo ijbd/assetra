@@ -6,9 +6,6 @@ Python Power System Reliability Package
 .. image:: https://img.shields.io/pypi/v/powersys.svg
         :target: https://pypi.python.org/pypi/powersys
 
-.. image:: https://img.shields.io/travis/ijbd/powersys.svg
-        :target: https://travis-ci.com/ijbd/powersys
-
 .. image:: https://readthedocs.org/projects/powersys/badge/?version=latest
         :target: https://powersys.readthedocs.io/en/latest/?version=latest
         :alt: Documentation Status
