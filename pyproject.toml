@@ -2,12 +2,16 @@
 name = "powersys"
 version = "0.1.0"
 description = "An open-source power system reliability package."
-authors = ["Isaac Bromley-Dulfano <ijbd@umich.edu>"]
+authors = [
+	"Isaac Bromley-Dulfano <ijbd@umich.edu>",
+	"Srihari Sundar <sriharis@umich.edu>"
+]
 license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.10"
+
 
 [build-system]
 requires = ["poetry-core"]
