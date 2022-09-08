@@ -1,27 +1,14 @@
-[project]
-name = "powersys_ijbd"
-version = "0.0.0"
-authors = [
-    { name="Isaac Bromley-Dulfano", email="ijbd@umich.edu" },
-    { name="Srihari Sundar", email="sriharis@umich.edu" }
-]
+[tool.poetry]
+name = "powersys"
+version = "0.1.0"
 description = "An open-source power system reliability package."
-readme = "README.rst"
-license = { file="LICENSE" }
-requires-python = ">=3.7"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent"
-]
+authors = ["Isaac Bromley-Dulfano <ijbd@umich.edu>"]
+license = "MIT"
+readme = "README.md"
 
-[project.urls]
-"Homepage" = "https://github.com/ijbd/powersys.git"
-"Documentation" = "https://powersys.readthedocs.io/en/latest/index.html"
+[tool.poetry.dependencies]
+python = "^3.7"
 
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
-
-[project.scripts]
-powersys = "powersys.cli
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

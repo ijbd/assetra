@@ -2,4 +2,4 @@
 
 __author__ = """Isaac Bromley-Dulfano"""
 __email__ = 'ijbd@umich.edu'
-__version__ = '0.0.0'
+__version__ = '0.1.0'
