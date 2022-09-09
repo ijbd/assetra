@@ -47,3 +47,6 @@ target/
 # IDE settings
 .vscode/
 .idea/
+
+# others
+data

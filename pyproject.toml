@@ -7,7 +7,7 @@ authors = [
 	"Srihari Sundar <sriharis@umich.edu>"
 ]
 license = "MIT"
-readme = "README.md"
+readme = "README.rst"
 
 [tool.poetry.dependencies]
 python = "^3.10"
