@@ -12,6 +12,7 @@ readme = "README.rst"
 [tool.poetry.dependencies]
 python = "^3.10"
 black = "^22.8.0"
+pandas = "^1.4.4"
 
 
 [build-system]
