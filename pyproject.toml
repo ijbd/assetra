@@ -13,6 +13,7 @@ readme = "README.rst"
 python = "^3.10"
 black = "^22.8.0"
 pandas = "^1.4.4"
+openpyxl = "^3.0.10"
 
 
 [build-system]
