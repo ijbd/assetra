@@ -18,18 +18,28 @@ class TestDataLoader(unittest.TestCase):
 		d = DataLoader.DataLoader(*self.test_arguments)
 		d._load_eia_930_cleaned_demand()
 
-		self.assertEqual(len(d.time_stamps), 8760)
 		self.assertEqual(len(d.hourly_demand), 8760)
 
 	def test_load_eia_860_plants(self):
 		d = DataLoader.DataLoader(*self.test_arguments)
 		d._load_eia_860_plants()
+		
+		self.assertEqual(len(d._plant_codes), len(d._plant_latitudes))
+		self.assertEqual(len(d._plant_latitudes), len(d._plant_longitudes))
 
-		print(d)
+	def test_load_eia_860_thermal(self):
+		d = DataLoader.DataLoader(*self.test_arguments)
+		d._load_eia_860_plants()
+		d._load_eia_860_thermal()
+
+		thermal_fleet_size = len(d.thermal_capacity)
+		
+		self.assertEqual(len(d.thermal_technology), thermal_fleet_size)
+		self.assertEqual(len(d.thermal_latitude), thermal_fleet_size)
+		self.assertEqual(len(d.thermal_longitude), thermal_fleet_size)
 
 	def test_context(self):
 		pass
 
 if __name__ == '__main__':
-	from powersys import DataLoader
 	unittest.main()

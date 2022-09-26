@@ -5,6 +5,15 @@ import pandas as pd
 
 logger = getLogger(__name__)
 
+EIA_860_NON_THERMAL_TECHNOLOGY = [
+	'Onshore Wind Turbine',
+	'Conventional Hydroelectric',
+	'Solar Photovoltaic',
+	'Offshore Wind Turbine',
+	'Batteries',
+	'Hydroelectric Pumped Storage'
+]
+
 class DataLoader:
 	"""This is a class interface for loading necessary data into the 
 	power system reliability model. It can be modified according to 
@@ -33,8 +42,8 @@ class DataLoader:
 		self._load_eia_930_cleaned_hourly_demand()
 		self._load_merra_temperature()
 		self._load_merra_power_generation()
-		self._load_eia_860_fleet()
-
+		self._load_eia_860_data()
+		
 	def __exit__(self):
 		pass
 
@@ -69,10 +78,7 @@ class DataLoader:
 			eia_930_df = self._remove_leap_day(eia_930_df)
 
 			# keep demand
-			subset = eia_930_df['cleaned demand (MW)']
-
-			self.time_stamps = subset.index.values
-			self.hourly_demand = subset.values
+			self.hourly_demand = eia_930_df['cleaned demand (MW)'].values
 			
 		except FileNotFoundError as e:
 			logger.error(f'Expected EIA-930 file located at: {eia_930_file}')
@@ -117,7 +123,7 @@ class DataLoader:
 		"""
 		pass
 
-	def _load_eia_860_fleet(self):
+	def _load_eia_860_data(self):
 		"""This function loads all data needed *from* EIA 860
 		dataset to populate the Fleet objects. However, additional
 		data is needed. 
@@ -129,8 +135,8 @@ class DataLoader:
 
 
 	def _load_eia_860_plants(self):
-		"""This function loads the eia 860 plant data"""
-		logger.info("Loading hourly demand from cleaned EIA-930 dataset")
+		"""This function loads the eia 860 plant data for the selected year and region"""
+		logger.info("Loading plant data from EIA-860 dataset")
 		# find file
 		eia_860_plant_file = Path(self.data_directory, 'eia860', f'2___Plant_Y{self.year}.xlsx')
 
@@ -162,12 +168,58 @@ class DataLoader:
 			logger.error(f'Expected EIA-860 plant file located at: {eia_860_plant_file}')
 			raise e
 
-
 	def _load_eia_860_thermal(self):
+		"""This function loads thermal generator data from eia 860 using plant
+		data from _load_eia_860_plants. This function must be run after 
+		_load_eia_860_plants"""
+		logger.info("Loading thermal generator data from EIA-860 dataset")
+		# find file
+		eia_860_generator_file = Path(self.data_directory, 'eia860', f'3_1_Generator_Y{self.year}.xlsx')
+
+		#open file
+		try:
+			# read
+			eia_860_generator_df = pd.read_excel(
+				eia_860_generator_file,
+				skiprows=1,
+				usecols=[
+					'Plant Code',
+					'Technology',
+					'Nameplate Capacity (MW)',
+					'Status'
+				]
+			)
+
+			# filter by plants
+			eia_860_generator_df = eia_860_generator_df[
+				eia_860_generator_df['Plant Code'].isin(self._plant_codes)
+			]
+
+			# filter by technology
+			eia_860_generator_df = eia_860_generator_df[
+				~eia_860_generator_df['Technology'].isin(EIA_860_NON_THERMAL_TECHNOLOGY)
+			]
+
+			# filter by status
+			eia_860_generator_df = eia_860_generator_df[
+				eia_860_generator_df['Status'] == 'OP'
+			]
+
+			# save
+			self.thermal_capacity = eia_860_generator_df['Nameplate Capacity (MW)']
+			self.thermal_technology = eia_860_generator_df['Technology']
+
+			# get latitude array
+			self.thermal_latitude = self._plant_latitudes[eia_860_generator_df['Plant Code']]
+			self.thermal_longitude = self._plant_longitudes[eia_860_generator_df['Plant Code']]
+
+		except FileNotFoundError as e:
+			logger.error(f'Expected EIA-860 generator file located at: {eia_860_generator_file}')
+			raise e
+
+	def _load_eia_860_wind(self):
 		pass
 
 	def _load_eia_860_solar(self):
 		pass
 
-	def _load_eia_860_wind(self):
-		pass
