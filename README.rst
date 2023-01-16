@@ -1,23 +1,23 @@
 =======================================
-Python Power System Reliability Package
+ASSET Lab Resource Adequacy Package (assetra)
 =======================================
 
 
-.. image:: https://img.shields.io/pypi/v/powersys.svg
-        :target: https://pypi.python.org/pypi/powersys
+.. image:: https://img.shields.io/pypi/v/assetra.svg
+        :target: https://pypi.python.org/pypi/assetra
 
-.. image:: https://readthedocs.org/projects/powersys/badge/?version=latest
-        :target: https://powersys.readthedocs.io/en/latest/?version=latest
+.. image:: https://readthedocs.org/projects/assetra/badge/?version=latest
+        :target: https://assetra.readthedocs.io/en/latest/?version=latest
         :alt: Documentation Status
 
 
 
 
-An open-source power system reliability package maintained by the University of Michigan ASSET Lab.
+An open-source energy system resource adequacy package maintained by the University of Michigan ASSET Lab.
 
 
 * Free software: MIT license
-* Documentation: https://powersys.readthedocs.io.
+* Documentation: https://assetra.readthedocs.io.
 
 
 Features

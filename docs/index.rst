@@ -1,4 +1,4 @@
-Welcome to Python Power System Reliability Package's documentation!
+Welcome to the ASSET Lab Resource Adequacy Package's documentation!
 ======================================
 
 .. toctree::

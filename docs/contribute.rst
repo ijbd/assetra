@@ -2,12 +2,12 @@
 Contribute
 =====
 
-Please feel free contribute to the Python Power System Reliability Package.
+Please feel free contribute to the ASSET Lab Resource Adequacy Package.
 
 Using Poetry
 ------------
 
-The Python Power System Reliability Package uses the Poetry dependency management tool. 
+The ASSET Lab Resource Adequacy Package uses the Poetry dependency management tool. 
 From a contributors point of view, Poetry is responsible for two tasks:
 
 1. Managing the virtual environment used to run and test code.

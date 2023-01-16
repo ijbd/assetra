@@ -1,1 +1,1 @@
-"""Unit test package for powersys."""
+"""Unit test package for assetra."""

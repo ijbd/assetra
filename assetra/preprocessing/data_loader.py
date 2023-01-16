@@ -18,10 +18,9 @@ EIA_860_NON_THERMAL_TECHNOLOGY = [
 ]
 
 class DataLoader:
-	"""This is a class interface for loading necessary data into the 
-	power system reliability model. It can be modified according to 
-	data availability. It should convert raw datasets into source-agnostic 
-	classes
+	"""This is a class interface for loading necessary data into assetra. 
+	It can be modified according to data availability. 
+	It should convert raw datasets into source-agnostic classes
 
 	:param region_name: The name of the balancing authority for which this 
 		object will load data. Valid balancing authorities can be found @
