@@ -1,4 +1,4 @@
-* Python Power System Reliability Package version:
+* assetra version:
 * Python version:
 * Operating System:
 

@@ -2,6 +2,6 @@
 Usage
 =====
 
-To use Python Power System Reliability Package in a project::
+To use the ASSET Lab Resource Adequacy Package in a project::
 
-    import powersys
+    import assetra
