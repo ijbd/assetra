@@ -25,7 +25,7 @@ class EnergySystem:
 		for energy_source in self.energy_sources:
 			get_hourly_generation(energy_unit)
 
-class ProbabilisticAnalysisModel:
+class ProbabilisticSimulation:
 	def __init__(
 		self, 
 		energy_system: EnergySystem,
