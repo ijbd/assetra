@@ -7,88 +7,7 @@ import dask as da
 
 log = getLogger(__name__)
 
-
-### RESOURCE CONTRIBUTION
-
-class ResourceContributionMetric:
-	'''Class responsible for evaluating the resource contribution
-	of one energy system object to another.'''
-	def __init__(
-		self):
-		pass
-
-### RESOURCE ADEQUACY
-
-class ResourceAdequacyMetric:
-	'''Class responsible for evaluating resource adequacy of
-	a ProbabilisticSimulation object.'''
-	def __init__(
-		self):
-		pass
-
-### PROBABILISTIC SIMULATION
-
-class BulkProbabilisticSimulation:
-	'''Class responsible for creating/storing the Monte Carlo
-	trials for BulkEnergySystem objects.'''
-	def __init__(
-		self,
-		bulk_energy_system: BulkEnergySystem,
-		num_monte_carlo_trials: int,
-		num_time_steps: int):
-		pass
-
-	def run(self):
-		pass
-
-class ProbabilisticSimulation:
-	'''Class responsible for creating/storing the Monte Carlo
-	trials for EnergySystem objects.'''
-	def __init__(
-		self, 
-		energy_system: EnergySystem,
-		num_monte_carlo_trials: int,
-		num_time_steps: int):
-		pass
-		
-	def run(self):
-		pass
-
-### CORE 
-
-class BulkEnergySystem:
-	'''Class responsible for balancing capacity between
-	energy systems.'''
-	def __init__(self, energy_systems: List[EnergySystem]):
-		self.energy_systems = energy_systems
-
-	def get_hourly_capacity(self):
-		pass
-
-class EnergySystem:
-	'''Class responsible for managing energy units.'''
-	def __init__(
-		self,
-		name: str):
-		self.energy_units = []
-
-	def add_unit(self, energy_unit):
-		self.energy_units.append(energy_unit)
-
-	def remove_unit(self, energy_unit):
-		self.energy_units.remove(energy_unit)
-
-	def get_hourly_capacity_by_unit(self):
-		'''Returns the hourly capacity of each generating unit
-		in the energy system.'''
-		hourly_capacity_matrix = da.zeros(
-			(self.num_generators, 8760))
-		hourly_net_capacity = da.zeros(8760)
-		for i, energy_unit in enumerate(self.energy_units):
-			hourly_capacity_matrix[i] = energy_unit.get_hourly_capacity()
-			hourly_net_capacity += hourly_capacity_matrix[i]
-
-		return hourly_capacity_matrix
+### ENERGY UNIT(S)
 
 class EnergyUnit(ABC):
 	def __init__(
@@ -139,3 +58,41 @@ class DemandUnit:
 
 	def get_hourly_capacity(self):
 		return -(self._hourly_demand)
+
+### ENERGY SYSTEM
+
+class EnergySystem:
+	'''Class responsible for managing energy units.'''
+	def __init__(
+		self,
+		name: str):
+		self.energy_units = []
+
+	def add_unit(self, energy_unit):
+		self.energy_units.append(energy_unit)
+
+	def remove_unit(self, energy_unit):
+		self.energy_units.remove(energy_unit)
+
+	def get_hourly_capacity_by_unit(self):
+		'''Returns the hourly capacity of each generating unit
+		in the energy system.'''
+		hourly_capacity_matrix = da.zeros(
+			(self.num_generators, 8760))
+		hourly_net_capacity = da.zeros(8760)
+		for i, energy_unit in enumerate(self.energy_units):
+			hourly_capacity_matrix[i] = energy_unit.get_hourly_capacity()
+			hourly_net_capacity += hourly_capacity_matrix[i]
+
+		return hourly_capacity_matrix
+
+### BULK ENERGY SYSTEM
+
+class BulkEnergySystem:
+	'''Class responsible for balancing capacity between
+	energy systems.'''
+	def __init__(self, energy_systems: List[EnergySystem]):
+		self.energy_systems = energy_systems
+
+	def get_hourly_capacity(self):
+		pass
