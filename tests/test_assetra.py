@@ -8,7 +8,6 @@ import numpy as np
 sys.path.append('..')
 
 class TestCore(unittest.TestCase):
-		
 
 	def test_demand_unit(self):
 		'''The capacity of a demand unit is the negation of its 
@@ -75,7 +74,6 @@ class TestCore(unittest.TestCase):
 				observed
 				)
 			)
-
 
 if __name__ == '__main__':
 	unittest.main()
