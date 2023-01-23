@@ -18,9 +18,10 @@ class EnergyUnit(ABC):
 		self._nameplate_capacity = nameplate_capacity
 
 	@abstractmethod
-	def get_hourly_capacity
+	def get_hourly_capacity(self):
 		'''Returns a single instance of the hourly capacity of the 
 		generating unit.'''
+		pass
 
 class StochasticUnit:
 	'''Class responsible for returning capacity profile of 
