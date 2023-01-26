@@ -18,6 +18,10 @@ class ProbabilisticSimulation:
 		self._start_hour = start_hour
 		self._end_hour = end_hour
 		self._trial_size = trial_size
+
+	@property
+	def hours(self):
+		return self._end_hour - self._start_hour
 		
 	def run(self):
 		self.hourly_capacity_matrix = np.zeros((self._trial_size, 
