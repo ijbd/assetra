@@ -18,7 +18,7 @@ class ResourceAdequacyMetric(ABC):
 	def evaluate(self):
 		pass
 
-class LossOfLoadDays(ResourceAdequacy):
+class LossOfLoadDays(ResourceAdequacyMetric):
 	def evaluate(self):
 		hourly_outages_by_trial = self.probabilisitic_simulation.hourly_outage_by_trial
 		hourly_outages = np.sum(hourly_outages_by_trial, axis=0)
