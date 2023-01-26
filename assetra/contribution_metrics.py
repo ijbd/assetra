@@ -1,4 +1,7 @@
-from abc import ABC
+from abc import abstractmethod, ABC
+
+# package
+from assetra.probabilistic_analysis import ProbabilisticSimulation
 
 class ResourceContributionMetric(ABC):
 	'''Class responsible for evaluating the resource contribution

@@ -1,6 +1,5 @@
 
 # package
-
 from assetra.core import EnergySystem, BulkEnergySystem
 
 # external
