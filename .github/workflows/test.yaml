@@ -34,4 +34,4 @@ jobs:
       - name: Check dependencies
         run: poetry show
       - name: Run tests
-        run: poetry run pytest
+        run: poetry run python -m unittest
