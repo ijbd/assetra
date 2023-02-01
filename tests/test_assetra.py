@@ -7,7 +7,6 @@ import numpy as np
 
 sys.path.append("..")
 
-
 class TestCore(unittest.TestCase):
     def test_demand_unit(self):
         """Capacity of demand unit is negation of demand."""
@@ -57,6 +56,24 @@ class TestCore(unittest.TestCase):
         observed = u.get_hourly_capacity(start_hour=0, end_hour=3)
         self.assertTrue(np.array_equal(expected, observed))
 
+    def test_stochastic_unit_3(self):
+        """FOR of stochastic unit is time-varying."""
+        from assetra.core import StochasticUnit
+
+        hourly_capacity = np.array([1, 1])
+        hourly_forced_outage_rate = np.array([1, 0])
+        u = StochasticUnit(
+            name="test_unit",
+            nameplate_capacity=1,
+            hourly_capacity=hourly_capacity,
+            hourly_forced_outage_rate=hourly_forced_outage_rate,
+        )
+
+        # test
+        expected = np.array([0, 1])
+        observed = u.get_hourly_capacity(start_hour=0, end_hour=2)
+        self.assertTrue(np.array_equal(expected, observed))
+
     def test_energy_system_1(self):
         """Energy units can be added and removed from systems."""
         from assetra.core import DemandUnit, EnergySystem
@@ -94,7 +111,6 @@ class TestCore(unittest.TestCase):
         expected = np.array([[0, -1], [-3, -4]])
         observed = e.get_hourly_capacity_by_unit(0, 2)
         self.assertTrue(np.array_equal(expected, observed))
-
 
 class TestProbabilisticAnalysis(unittest.TestCase):
     def test_probabilistic_simulation_1(self):
