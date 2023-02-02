@@ -189,7 +189,7 @@ class TestResourceAdequacyMetric(unittest.TestCase):
         observed = ra.evaluate()
         self.assertEqual(expected, observed)
 
-    def test_eue_2(self):
+    def test_eue_3(self):
         """EUE should ignore excess capacity in non-loss-of-load hours"""
         from assetra.core import EnergySystem, DemandUnit, StaticUnit
         from assetra.probabilistic_analysis import ProbabilisticSimulation
@@ -216,7 +216,7 @@ class TestResourceAdequacyMetric(unittest.TestCase):
 
 class TestResourceContribution(unittest.TestCase):
     def test_elcc_1(self):
-
+        pass
 
 
 if __name__ == "__main__":
