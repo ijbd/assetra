@@ -1,6 +1,7 @@
 from abc import abstractmethod, ABC
 
 # package
+from assetra.core import EnergySystem
 from assetra.probabilistic_analysis import ProbabilisticSimulation
 
 
@@ -24,7 +25,9 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
         addition: EnergySystem,
         threshold: float,
     ):
-        ResourceContributionMetric.__init__(self, probabilistic_simulation, addition)
+        ResourceContributionMetric.__init__(
+            self, probabilistic_simulation, addition
+        )
         self._threshold = threshold
 
     def get_resource_contribution(self):
@@ -40,7 +43,8 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
         additional_demand_lower_bound = 0
         additional_demand = (
             additional_demand_lower_bound
-            + (additional_demand_upper_bound - additional_demand_lower_bound) / 2
+            + (additional_demand_upper_bound - additional_demand_lower_bound)
+            / 2
         )
         self._resource_adequacy_model.set_demand_offset(additional_demand)
 
@@ -55,7 +59,10 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
                 additional_demand_upper_bound = additional_demand
                 additional_demand = (
                     additional_demand_lower_bound
-                    + (additional_demand_upper_bound - additional_demand_lower_bound)
+                    + (
+                        additional_demand_upper_bound
+                        - additional_demand_lower_bound
+                    )
                     / 2
                 )
 
@@ -64,12 +71,15 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
                 additional_demand_lower_bound = additional_demand
                 additional_demand = (
                     additional_demand_lower_bound
-                    + (additional_demand_upper_bound - additional_demand_lower_bound)
+                    + (
+                        additional_demand_upper_bound
+                        - additional_demand_lower_bound
+                    )
                     / 2
                 )
 
             # update constant demand
-            self._resource_adequacy.set_demand_offset(added_demand)
+            self._resource_adequacy.set_demand_offset(additional_demand)
 
             # update resource adequacy
             new_adequacy = self._resource_adequacy_model.evaluate()

@@ -31,7 +31,9 @@ class ExpectedUnservedEnergy(ResourceAdequacyMetric):
         hourly_unserved_energy = np.where(
             net_hourly_capacity_by_trial < 0, -net_hourly_capacity_by_trial, 0
         )
-        return np.sum(hourly_unserved_energy / net_hourly_capacity_by_trial.size)
+        return np.sum(
+            hourly_unserved_energy / net_hourly_capacity_by_trial.size
+        )
 
 
 class LossOfLoadHours(ResourceAdequacyMetric):

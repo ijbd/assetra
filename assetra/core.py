@@ -1,16 +1,14 @@
+from __future__ import annotations
 from abc import abstractmethod, ABC
 from logging import getLogger
-from typing import List
-from datetime import datetime
 
 # external
 from numpy.typing import ArrayLike
 import numpy as np
-import pandas as pd
 
 log = getLogger(__name__)
 
-### ENERGY UNIT(S)
+# ENERGY UNIT(S)
 
 
 class EnergyUnit(ABC):
@@ -49,7 +47,9 @@ class DemandUnit(StaticUnit):
     (i.e. system loads)."""
 
     def __init__(self, hourly_demand: np.ndarray):
-        StaticUnit.__init__(self, nameplate_capacity=0, hourly_capacity=-hourly_demand)
+        StaticUnit.__init__(
+            self, nameplate_capacity=0, hourly_capacity=-hourly_demand
+        )
 
 
 class StochasticUnit(EnergyUnit):
@@ -91,7 +91,7 @@ class StorageUnit(EnergyUnit):
         duration: float,
         roundtrip_efficiency: float,
     ):
-        self._energy_system = _energy_system
+        self._energy_system = energy_system
         self._charge_rate = charge_rate
         self._discharge_rate = discharge_rate
         self._charge_capacity = discharge_rate * duration
@@ -109,7 +109,7 @@ class StorageUnit(EnergyUnit):
         # simulate dispatch
         hourly_capacity = np.array(
             [
-                self._dispatch_storage(net_capacity, current_charge)
+                self._dispatch_storage(net_capacity)
                 for net_capacity in net_hourly_capacity
             ]
         )
@@ -140,14 +140,16 @@ class StorageUnit(EnergyUnit):
 
     def _discharge_storage(self, unmet_demand: float):
         capacity = min(
-            self._discharge_rate, self._current_charge, unmet_demand / self._efficiency
+            self._discharge_rate,
+            self._current_charge,
+            unmet_demand / self._efficiency,
         )
         self._current_charge -= capacity
 
         return capacity * self._efficiency
 
 
-### ENERGY SYSTEM
+# ENERGY SYSTEM
 
 
 class EnergySystem:
