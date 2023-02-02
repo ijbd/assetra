@@ -1,5 +1,5 @@
 # package
-from assetra.core import EnergySystem, BulkEnergySystem
+from assetra.core import EnergySystem
 
 # external
 import numpy as np
@@ -39,20 +39,3 @@ class ProbabilisticSimulation:
             ] = self._energy_system.get_hourly_capacity_by_unit(
                 self._start_hour, self._end_hour
             )
-
-
-class BulkProbabilisticSimulation:
-    """Class responsible for creating/storing the Monte Carlo
-    trials for BulkEnergySystem objects."""
-
-    def __init__(
-        self,
-        bulk_energy_system: BulkEnergySystem,
-        start_hour: int,
-        end_hour: int,
-        trial_size: int,
-    ):
-        pass
-
-    def run(self):
-        pass

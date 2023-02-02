@@ -22,22 +22,17 @@ class ResourceAdequacyMetric(ABC):
     def evaluate(self):
         pass
 
-
-class LossOfLoadHours(ResourceAdequacyMetric):
-    def evaluate(self):
-        hourly_capacity_by_trial = (
-            self._probabilistic_simulation.hourly_capacity_by_trial
-        )
-        hourly_outages_by_trial = hourly_capacity_by_trial < 0
-        return np.sum(hourly_outages_by_trial / self._probabilistic_simulation.hours)
-
-
 class ExpectedUnservedEnergy(ResourceAdequacyMetric):
     def evaluate(self):
-        net_hourly_capacity_by_trial = (
-            self._probabilistic_simulation.net_hourly_capacity_by_trial
+        net_hourly_capacity_by_trial = np.sum(
+            self._probabilistic_simulation.hourly_capacity_matrix, axis=1
         )
         hourly_unserved_energy = np.where(
             net_hourly_capacity_by_trial < 0, -net_hourly_capacity_by_trial, 0
         )
-        return np.sum(hourly_unserved_energy / self._probabilisitc_simulation.hours)
+        return np.sum(hourly_unserved_energy / net_hourly_capacity_by_trial.size)
+
+
+class LossOfLoadHours(ResourceAdequacyMetric):
+    def evaluate(self):
+        pass
