@@ -14,15 +14,10 @@ log = getLogger(__name__)
 
 
 class EnergyUnit(ABC):
-    def __init__(self, name: str, nameplate_capacity: float):
-        self._name = str(name)
-        self._nameplate_capacity = float(nameplate_capacity)
+    def __init__(self, nameplate_capacity: float = 0):
+        self._nameplate_capacity = nameplate_capacity
 
     # READ-ONLY VARIABLES
-
-    @property
-    def name(self):
-        return self._name
 
     @property
     def nameplate_capacity(self):
@@ -37,31 +32,38 @@ class EnergyUnit(ABC):
         pass
 
 
-class DemandUnit:
+class StaticUnit(EnergyUnit):
+    """Class responsible for returning capacity profile of non-stochastic units
+    (i.e. system loads)."""
+
+    def __init__(self, nameplate_capacity: float, hourly_capacity: np.ndarray):
+        EnergyUnit.__init__(self, nameplate_capacity)
+        self._hourly_capacity = hourly_capacity
+
+    def get_hourly_capacity(self, start_hour: int, end_hour: int):
+        return self._hourly_capacity[start_hour:end_hour]
+
+
+class DemandUnit(StaticUnit):
     """Class responsible for returning capacity profile of fixed demand units
     (i.e. system loads)."""
 
-    def __init__(self, name: str, hourly_demand: np.ndarray):
-        EnergyUnit.__init__(self, name, nameplate_capacity=0)
-        self._hourly_demand = hourly_demand
-
-    def get_hourly_capacity(self, start_hour: int, end_hour: int):
-        return -(self._hourly_demand[start_hour:end_hour])
+    def __init__(self, hourly_demand: np.ndarray):
+        StaticUnit.__init__(self, nameplate_capacity=0, hourly_capacity=-hourly_demand)
 
 
-class StochasticUnit:
+class StochasticUnit(EnergyUnit):
     """Class responsible for returning capacity profile of
     stochastically-sampled units (i.e. generators)."""
 
     def __init__(
         self,
-        name: str,
         nameplate_capacity: float,
         hourly_capacity: ArrayLike,
         hourly_forced_outage_rate: ArrayLike,
     ):
         # initialize base class variables
-        EnergyUnit.__init__(self, name, nameplate_capacity)
+        EnergyUnit.__init__(self, nameplate_capacity)
         # initialize stochastic specific variables
         self._hourly_capacity = hourly_capacity
         self._hourly_forced_outage_rate = hourly_forced_outage_rate
@@ -77,13 +79,81 @@ class StochasticUnit:
         return hourly_capacity_instance
 
 
+class StorageUnit(EnergyUnit):
+    """Class responsible for returning capacity profile of state-limited
+    storage units"""
+
+    def __init__(
+        self,
+        energy_system: EnergySystem,
+        charge_rate: float,
+        discharge_rate: float,
+        duration: float,
+        roundtrip_efficiency: float,
+    ):
+        self._energy_system = _energy_system
+        self._charge_rate = charge_rate
+        self._discharge_rate = discharge_rate
+        self._charge_capacity = discharge_rate * duration
+        self._efficiency = roundtrip_efficiency**0.5
+
+    def get_hourly_capacity(self, start_hour: int, end_hour: int):
+        # setup
+        net_hourly_capacity = self._energy_system.net_hourly_capacity[
+            start_hour:end_hour
+        ]
+
+        # initialize full storage unit
+        self._current_charge = self._charge_capacity
+
+        # simulate dispatch
+        hourly_capacity = np.array(
+            [
+                self._dispatch_storage(net_capacity, current_charge)
+                for net_capacity in net_hourly_capacity
+            ]
+        )
+
+        return hourly_capacity
+
+    def _dispatch_storage(self, net_capacity: float):
+        capacity = 0
+        if net_capacity < 0:
+            # unmet demand
+            if self._current_charge > 0:
+                capacity = self._discharge_storage(-net_capacity)
+        else:
+            # excess capacity
+            if self._current_charge < self._charge_capacity:
+                capacity = self._charge_storage(net_capacity)
+        return capacity
+
+    def _charge_storage(self, excess_capacity: float):
+        capacity = -min(
+            self._charge_rate,
+            (self._charge_capacity - self._current_charge) / self._efficiency,
+            excess_capacity,
+        )
+        self._current_charge -= capacity * self._efficiency
+
+        return capacity
+
+    def _discharge_storage(self, unmet_demand: float):
+        capacity = min(
+            self._discharge_rate, self._current_charge, unmet_demand / self._efficiency
+        )
+        self._current_charge -= capacity
+
+        return capacity * self._efficiency
+
+
 ### ENERGY SYSTEM
 
 
 class EnergySystem:
     """Class responsible for managing energy units."""
 
-    def __init__(self, name: str):
+    def __init__(self):
         self._energy_units = []
 
     @property
@@ -112,17 +182,3 @@ class EnergySystem:
             hourly_net_capacity += hourly_capacity_matrix[i]
 
         return hourly_capacity_matrix
-
-
-### BULK ENERGY SYSTEM
-
-
-class BulkEnergySystem:
-    """Class responsible for balancing capacity between
-    energy systems."""
-
-    def __init__(self, energy_systems: List[EnergySystem]):
-        self.energy_systems = energy_systems
-
-    def get_hourly_capacity(self, start_hour: int, end_hour: int):
-        pass
