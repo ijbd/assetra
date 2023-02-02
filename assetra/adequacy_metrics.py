@@ -22,6 +22,7 @@ class ResourceAdequacyMetric(ABC):
     def evaluate(self):
         pass
 
+
 class ExpectedUnservedEnergy(ResourceAdequacyMetric):
     def evaluate(self):
         net_hourly_capacity_by_trial = np.sum(

@@ -22,7 +22,7 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
         self,
         probabilistic_simulation: ProbabilisticSimulation,
         addition: EnergySystem,
-        threshold: float
+        threshold: float,
     ):
         ResourceContributionMetric.__init__(self, probabilistic_simulation, addition)
         self._threshold = threshold
