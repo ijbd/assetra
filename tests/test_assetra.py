@@ -72,6 +72,75 @@ class TestCore(unittest.TestCase):
         observed = u.get_hourly_capacity(start_hour=0, end_hour=2)
         self.assertTrue(np.array_equal(expected, observed))
 
+    def test_storage_unit_1(self):
+        """Storage unit should not overdischarge."""
+        from assetra.core import StorageUnit
+
+        net_hourly_capacity = np.array([-1, -1, -1, -1])
+        u = StorageUnit(
+            charge_rate=1,
+            discharge_rate=1,
+            duration=1,
+            roundtrip_efficiency=1,
+        )
+
+        # test
+        expected = np.array([1, 0, 0, 0])
+        observed = u.get_hourly_capacity(net_hourly_capacity)
+        self.assertTrue(np.array_equal(expected, observed))
+
+
+    def test_storage_unit_2(self):
+        """Storage unit should charge as much as possible."""
+        from assetra.core import StorageUnit
+
+        net_hourly_capacity = net_hourly_capacity = np.array([-1, 1, 1, 1])
+        u = StorageUnit(
+            charge_rate=1,
+            discharge_rate=1,
+            duration=1,
+            roundtrip_efficiency=1,
+        )
+
+        # test
+        expected = np.array([1, -1, 0, 0])
+        observed = u.get_hourly_capacity(net_hourly_capacity)
+        self.assertTrue(np.array_equal(expected, observed))
+
+    def test_storage_unit_3(self):
+        """Storage unit is efficiency-derated on charge and discharge."""
+        from assetra.core import StorageUnit
+
+        net_hourly_capacity = net_hourly_capacity = np.array([-1, 1, 1, 1, 1, 1])
+        u = StorageUnit(
+            charge_rate=1,
+            discharge_rate=4,
+            duration=1,
+            roundtrip_efficiency=0.25,
+        )
+
+        # test
+        expected = np.array([1, -1, -1, -1, -1, 0])
+        observed = u.get_hourly_capacity(net_hourly_capacity)
+        self.assertTrue(np.array_equal(expected, observed))
+
+    def test_storage_unit_4(self):
+        """Storage unit should not discharge more than its discharge rate."""
+        from assetra.core import StorageUnit
+
+        net_hourly_capacity = net_hourly_capacity = np.array([-2, -2, -2, -2])
+        u = StorageUnit(
+            charge_rate=1,
+            discharge_rate=1,
+            duration=3,
+            roundtrip_efficiency=1,
+        )
+
+        # test
+        expected = np.array([1, 1, 1, 0])
+        observed = u.get_hourly_capacity(net_hourly_capacity)
+        self.assertTrue(np.array_equal(expected, observed))
+
     def test_energy_system_1(self):
         """Energy units can be added and removed from systems."""
         from assetra.core import StaticUnit, EnergySystem
