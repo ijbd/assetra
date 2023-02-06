@@ -82,27 +82,19 @@ class StochasticUnit(EnergyUnit):
 class StorageUnit(EnergyUnit):
     """Class responsible for returning capacity profile of state-limited
     storage units"""
-
     def __init__(
         self,
-        energy_system: EnergySystem,
         charge_rate: float,
         discharge_rate: float,
         duration: float,
         roundtrip_efficiency: float,
     ):
-        self._energy_system = energy_system
         self._charge_rate = charge_rate
         self._discharge_rate = discharge_rate
         self._charge_capacity = discharge_rate * duration
         self._efficiency = roundtrip_efficiency**0.5
 
-    def get_hourly_capacity(self, start_hour: int, end_hour: int):
-        # setup
-        net_hourly_capacity = self._energy_system.net_hourly_capacity[
-            start_hour:end_hour
-        ]
-
+    def get_hourly_capacity(self, net_hourly_capacity: ArrayLike):
         # initialize full storage unit
         self._current_charge = self._charge_capacity
 
@@ -113,7 +105,7 @@ class StorageUnit(EnergyUnit):
                 for net_capacity in net_hourly_capacity
             ]
         )
-
+        
         return hourly_capacity
 
     def _dispatch_storage(self, net_capacity: float):
@@ -126,6 +118,7 @@ class StorageUnit(EnergyUnit):
             # excess capacity
             if self._current_charge < self._charge_capacity:
                 capacity = self._charge_storage(net_capacity)
+
         return capacity
 
     def _charge_storage(self, excess_capacity: float):
@@ -140,7 +133,7 @@ class StorageUnit(EnergyUnit):
 
     def _discharge_storage(self, unmet_demand: float):
         capacity = min(
-            self._discharge_rate,
+            self._discharge_rate / self._efficiency,
             self._current_charge,
             unmet_demand / self._efficiency,
         )
