@@ -12,8 +12,9 @@ log = getLogger(__name__)
 
 
 class EnergyUnit(ABC):
-    def __init__(self, nameplate_capacity: float = 0):
+    def __init__(self, nameplate_capacity: float, is_responsive: bool):
         self._nameplate_capacity = nameplate_capacity
+        self._is_responsive = is_responsive
 
     # READ-ONLY VARIABLES
 
@@ -21,10 +22,14 @@ class EnergyUnit(ABC):
     def nameplate_capacity(self):
         return self._nameplate_capacity
 
+    @property
+    def is_responsive(self):
+        return self._is_responsive
+
     # METHODS
 
     @abstractmethod
-    def get_hourly_capacity(self, start_hour: int, end_hour: int):
+    def get_hourly_capacity(self):
         """Returns a single instance of the hourly capacity of the
         generating unit."""
         pass
@@ -35,7 +40,7 @@ class StaticUnit(EnergyUnit):
     (i.e. system loads)."""
 
     def __init__(self, nameplate_capacity: float, hourly_capacity: np.ndarray):
-        EnergyUnit.__init__(self, nameplate_capacity)
+        EnergyUnit.__init__(self, nameplate_capacity=nameplate_capacity, is_responsive=False)
         self._hourly_capacity = hourly_capacity
 
     def get_hourly_capacity(self, start_hour: int, end_hour: int):
@@ -63,7 +68,7 @@ class StochasticUnit(EnergyUnit):
         hourly_forced_outage_rate: ArrayLike,
     ):
         # initialize base class variables
-        EnergyUnit.__init__(self, nameplate_capacity)
+        EnergyUnit.__init__(self, nameplate_capacity=nameplate_capacity, is_responsive=False)
         # initialize stochastic specific variables
         self._hourly_capacity = hourly_capacity
         self._hourly_forced_outage_rate = hourly_forced_outage_rate
@@ -89,6 +94,7 @@ class StorageUnit(EnergyUnit):
         duration: float,
         roundtrip_efficiency: float,
     ):
+        EnergyUnit.__init__(self, nameplate_capacity=discharge_rate, is_responsive=True)
         self._charge_rate = charge_rate
         self._discharge_rate = discharge_rate
         self._charge_capacity = discharge_rate * duration
@@ -171,9 +177,15 @@ class EnergySystem:
         hourly_capacity_matrix = np.zeros((self.size, end_hour - start_hour))
         hourly_net_capacity = np.zeros(end_hour - start_hour)
         for i, energy_unit in enumerate(self._energy_units):
-            hourly_capacity_matrix[i] = energy_unit.get_hourly_capacity(
-                start_hour, end_hour
-            )
+            if not energy_unit.is_responsive:
+                hourly_capacity_matrix[i] = energy_unit.get_hourly_capacity(
+                    start_hour, end_hour
+                )
+            else:
+                hourly_capacity_matrix[i] = energy_unit.get_hourly_capacity(
+                    hourly_net_capacity
+                )
+                
             hourly_net_capacity += hourly_capacity_matrix[i]
 
         return hourly_capacity_matrix

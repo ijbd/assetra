@@ -94,7 +94,7 @@ class TestCore(unittest.TestCase):
         """Storage unit should charge as much as possible."""
         from assetra.core import StorageUnit
 
-        net_hourly_capacity = net_hourly_capacity = np.array([-1, 1, 1, 1])
+        net_hourly_capacity = np.array([-1, 1, 1, 1])
         u = StorageUnit(
             charge_rate=1,
             discharge_rate=1,
@@ -111,7 +111,7 @@ class TestCore(unittest.TestCase):
         """Storage unit is efficiency-derated on charge and discharge."""
         from assetra.core import StorageUnit
 
-        net_hourly_capacity = net_hourly_capacity = np.array([-1, 1, 1, 1, 1, 1])
+        net_hourly_capacity = np.array([-1, 1, 1, 1, 1, 1])
         u = StorageUnit(
             charge_rate=1,
             discharge_rate=4,
@@ -128,7 +128,7 @@ class TestCore(unittest.TestCase):
         """Storage unit should not discharge more than its discharge rate."""
         from assetra.core import StorageUnit
 
-        net_hourly_capacity = net_hourly_capacity = np.array([-2, -2, -2, -2])
+        net_hourly_capacity = np.array([-2, -2, -2, -2])
         u = StorageUnit(
             charge_rate=1,
             discharge_rate=1,
@@ -176,6 +176,28 @@ class TestCore(unittest.TestCase):
         # sub-test 1
         e.add_unit(u2)
         expected = np.array([[0, 1], [3, 4]])
+        observed = e.get_hourly_capacity_by_unit(0, 2)
+        self.assertTrue(np.array_equal(expected, observed))
+
+    def test_energy_system_3(self):
+        """Energy systems dispatch in the order of added units."""
+        from assetra.core import DemandUnit, StaticUnit, StorageUnit, EnergySystem
+
+        e = EnergySystem()
+        u1 = DemandUnit(hourly_demand=np.array([2, 2]))
+        u2 = StaticUnit(nameplate_capacity=1, hourly_capacity=np.array([1, 1]))
+        u3 = StorageUnit(
+            charge_rate=1,
+            discharge_rate=1,
+            duration=1,
+            roundtrip_efficiency=1
+        )
+
+        # sub-test 1
+        e.add_unit(u1)
+        e.add_unit(u2)
+        e.add_unit(u3)
+        expected = np.array([[-2,-2], [1, 1], [1, 0]])
         observed = e.get_hourly_capacity_by_unit(0, 2)
         self.assertTrue(np.array_equal(expected, observed))
 
