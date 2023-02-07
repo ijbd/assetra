@@ -40,7 +40,9 @@ class StaticUnit(EnergyUnit):
     (i.e. system loads)."""
 
     def __init__(self, nameplate_capacity: float, hourly_capacity: np.ndarray):
-        EnergyUnit.__init__(self, nameplate_capacity=nameplate_capacity, is_responsive=False)
+        EnergyUnit.__init__(
+            self, nameplate_capacity=nameplate_capacity, is_responsive=False
+        )
         self._hourly_capacity = hourly_capacity
 
     def get_hourly_capacity(self, start_hour: int, end_hour: int):
@@ -68,7 +70,9 @@ class StochasticUnit(EnergyUnit):
         hourly_forced_outage_rate: ArrayLike,
     ):
         # initialize base class variables
-        EnergyUnit.__init__(self, nameplate_capacity=nameplate_capacity, is_responsive=False)
+        EnergyUnit.__init__(
+            self, nameplate_capacity=nameplate_capacity, is_responsive=False
+        )
         # initialize stochastic specific variables
         self._hourly_capacity = hourly_capacity
         self._hourly_forced_outage_rate = hourly_forced_outage_rate
@@ -87,6 +91,7 @@ class StochasticUnit(EnergyUnit):
 class StorageUnit(EnergyUnit):
     """Class responsible for returning capacity profile of state-limited
     storage units"""
+
     def __init__(
         self,
         charge_rate: float,
@@ -94,7 +99,9 @@ class StorageUnit(EnergyUnit):
         duration: float,
         roundtrip_efficiency: float,
     ):
-        EnergyUnit.__init__(self, nameplate_capacity=discharge_rate, is_responsive=True)
+        EnergyUnit.__init__(
+            self, nameplate_capacity=discharge_rate, is_responsive=True
+        )
         self._charge_rate = charge_rate
         self._discharge_rate = discharge_rate
         self._charge_capacity = discharge_rate * duration
@@ -111,7 +118,7 @@ class StorageUnit(EnergyUnit):
                 for net_capacity in net_hourly_capacity
             ]
         )
-        
+
         return hourly_capacity
 
     def _dispatch_storage(self, net_capacity: float):
@@ -185,7 +192,7 @@ class EnergySystem:
                 hourly_capacity_matrix[i] = energy_unit.get_hourly_capacity(
                     hourly_net_capacity
                 )
-                
+
             hourly_net_capacity += hourly_capacity_matrix[i]
 
         return hourly_capacity_matrix

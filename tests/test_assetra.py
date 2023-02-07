@@ -89,7 +89,6 @@ class TestCore(unittest.TestCase):
         observed = u.get_hourly_capacity(net_hourly_capacity)
         self.assertTrue(np.array_equal(expected, observed))
 
-
     def test_storage_unit_2(self):
         """Storage unit should charge as much as possible."""
         from assetra.core import StorageUnit
@@ -187,17 +186,14 @@ class TestCore(unittest.TestCase):
         u1 = DemandUnit(hourly_demand=np.array([2, 2]))
         u2 = StaticUnit(nameplate_capacity=1, hourly_capacity=np.array([1, 1]))
         u3 = StorageUnit(
-            charge_rate=1,
-            discharge_rate=1,
-            duration=1,
-            roundtrip_efficiency=1
+            charge_rate=1, discharge_rate=1, duration=1, roundtrip_efficiency=1
         )
 
         # sub-test 1
         e.add_unit(u1)
         e.add_unit(u2)
         e.add_unit(u3)
-        expected = np.array([[-2,-2], [1, 1], [1, 0]])
+        expected = np.array([[-2, -2], [1, 1], [1, 0]])
         observed = e.get_hourly_capacity_by_unit(0, 2)
         self.assertTrue(np.array_equal(expected, observed))
 
@@ -304,6 +300,7 @@ class TestResourceAdequacyMetric(unittest.TestCase):
         expected = 0.5
         observed = ra.evaluate()
         self.assertEqual(expected, observed)
+
 
 class TestResourceContribution(unittest.TestCase):
     def test_elcc_1(self):
