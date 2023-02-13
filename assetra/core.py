@@ -34,7 +34,6 @@ class EnergyUnit(ABC):
         generating unit."""
         pass
 
-
 class StaticUnit(EnergyUnit):
     """Class responsible for returning capacity profile of non-stochastic units
     (i.e. system loads)."""
@@ -57,6 +56,22 @@ class DemandUnit(StaticUnit):
         StaticUnit.__init__(
             self, nameplate_capacity=0, hourly_capacity=-hourly_demand
         )
+
+class ConstantDemandUnit(EnergyUnit):
+    def __init__(self, demand:float):
+        EnergyUnit.__init__(self, nameplate_capacity=0, is_responsive=False)
+        self._capacity = -demand
+
+    @property
+    def demand(self):
+        return -self._capacity
+
+    @demand.setter
+    def demand(self, new_demand):
+        self._capacity = -float(new_demand)
+
+    def get_hourly_capacity(self, start_hour: int, end_hour: int):
+        return np.ones(end_hour-start_hour) * self._capacity
 
 
 class StochasticUnit(EnergyUnit):
@@ -196,3 +211,16 @@ class EnergySystem:
             hourly_net_capacity += hourly_capacity_matrix[i]
 
         return hourly_capacity_matrix
+
+class Interconnection:
+    def __init__(self):
+        self._energy_systems = []
+
+    def add_energy_system(self, energy_system: EnergySystem):
+        self._energy_systems.append(energy_system)
+
+    def remove_energy_system(self, energy_system: EnergySystem):
+        self._energy_system.remove(energy_system)
+    
+    def get_hourly_capacity_by_system(self, start_hour: int, end_hour: int):
+        pass
