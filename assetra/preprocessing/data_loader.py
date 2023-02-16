@@ -243,9 +243,7 @@ class DataLoader:
 
             # filter by technology
             eia_860_generator_df = eia_860_generator_df[
-                ~eia_860_generator_df["Technology"].isin(
-                    EIA_860_NON_THERMAL_TECHNOLOGY
-                )
+                ~eia_860_generator_df["Technology"].isin(EIA_860_NON_THERMAL_TECHNOLOGY)
             ]
 
             # filter by status
@@ -254,9 +252,7 @@ class DataLoader:
             ]
 
             # save
-            self.thermal_capacity = eia_860_generator_df[
-                "Nameplate Capacity (MW)"
-            ]
+            self.thermal_capacity = eia_860_generator_df["Nameplate Capacity (MW)"]
             self.thermal_technology = eia_860_generator_df["Technology"]
 
             # get latitude array
@@ -312,9 +308,7 @@ class DataLoader:
             ].values
 
         except FileNotFoundError as e:
-            logger.error(
-                f"Expected EIA-860 wind file located at: {eia_860_wind_file}"
-            )
+            logger.error(f"Expected EIA-860 wind file located at: {eia_860_wind_file}")
             raise e
 
     def _load_eia_860_solar(self):
@@ -342,14 +336,10 @@ class DataLoader:
             ]
 
             # filter by status
-            eia_860_solar_df = eia_860_solar_df[
-                eia_860_solar_df["Status"] == "OP"
-            ]
+            eia_860_solar_df = eia_860_solar_df[eia_860_solar_df["Status"] == "OP"]
 
             # save
-            self.solar_capacity = eia_860_solar_df[
-                "Nameplate Capacity (MW)"
-            ].values
+            self.solar_capacity = eia_860_solar_df["Nameplate Capacity (MW)"].values
 
             # get latitude array
             self.solar_latitude = self._plant_latitudes[
@@ -402,9 +392,7 @@ class DataLoader:
             ]
 
             # save
-            self.storage_capacity = eia_860_storage_df[
-                "Nameplate Capacity (MW)"
-            ]
+            self.storage_capacity = eia_860_storage_df["Nameplate Capacity (MW)"]
             self.storage_energy_capacity = eia_860_storage_df[
                 "Nameplate Energy Capacity (MWh)"
             ]

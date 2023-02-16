@@ -12,11 +12,7 @@ class ResourceAdequacyMetric(ABC):
     a ProbabilisticSimulation object."""
 
     def __init__(self, probabilistic_simulation: ProbabilisticSimulation):
-        self._probabilistic_simulation = probabilistic_simulation
-
-    @property
-    def hours(self):
-        self._probabilistic_simulation.hours
+        self._simulation = probabilistic_simulation
 
     @abstractmethod
     def evaluate(self):
@@ -25,17 +21,19 @@ class ResourceAdequacyMetric(ABC):
 
 class ExpectedUnservedEnergy(ResourceAdequacyMetric):
     def evaluate(self):
-        net_hourly_capacity_by_trial = np.sum(
-            self._probabilistic_simulation.hourly_capacity_matrix, axis=1
+        hourly_unserved_energy = self._simulation.net_hourly_capacity_matrix.where(
+            self._simulation.net_hourly_capacity_matrix < 0, 0
         )
-        hourly_unserved_energy = np.where(
-            net_hourly_capacity_by_trial < 0, -net_hourly_capacity_by_trial, 0
-        )
-        return np.sum(
-            hourly_unserved_energy / net_hourly_capacity_by_trial.size
+        return float(
+            -hourly_unserved_energy.sum() / hourly_unserved_energy.sizes["trial"]
         )
 
 
 class LossOfLoadHours(ResourceAdequacyMetric):
+    def evaluate(self):
+        pass
+
+
+class LossOfLoadDays(ResourceAdequacyMetric):
     def evaluate(self):
         pass

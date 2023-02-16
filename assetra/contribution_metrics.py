@@ -3,34 +3,26 @@ from abc import abstractmethod, ABC
 # package
 from assetra.core import EnergySystem
 from assetra.probabilistic_analysis import ProbabilisticSimulation
+from assetra.adequacy_metrics import ResourceAdequacyMetric
 
 
-class ResourceContributionMetric(ABC):
-    """Class responsible for evaluating the resource contribution
-    of one energy system object to another."""
-
-    def __init__(self, resource_adequacy_model, addition: EnergySystem):
-        self._resource_adequacy_model = resource_adequacy_model
-        self._addition = addition
-
-    @abstractmethod
-    def evaluate():
-        pass
-
-
-class EffectiveLoadCarryingCapability(ResourceContributionMetric):
+class EffectiveLoadCarryingCapability:
     def __init__(
         self,
-        probabilistic_simulation: ProbabilisticSimulation,
+        target: EnergySystem,
         addition: EnergySystem,
+        probabilistic_simulation: ProbabilisticSimulation,
+        resource_adequacy_metric: ResourceAdequacyMetric,
         threshold: float,
     ):
-        ResourceContributionMetric.__init__(
-            self, probabilistic_simulation, addition
-        )
+        self._target = target
+        self._addition = addition
+        self._probabilistic_simulation = probabilistic_simulation
+        self._resource_adequacy_metric = resource_adequacy_metric
+        self._addition = addition
         self._threshold = threshold
 
-    def get_resource_contribution(self):
+    def evaluate(self):
 
         # find original resource adeqaucy
         original_adequacy = self._resource_adequacy_model.evaluate()
@@ -43,8 +35,7 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
         additional_demand_lower_bound = 0
         additional_demand = (
             additional_demand_lower_bound
-            + (additional_demand_upper_bound - additional_demand_lower_bound)
-            / 2
+            + (additional_demand_upper_bound - additional_demand_lower_bound) / 2
         )
         self._resource_adequacy_model.set_demand_offset(additional_demand)
 
@@ -59,10 +50,7 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
                 additional_demand_upper_bound = additional_demand
                 additional_demand = (
                     additional_demand_lower_bound
-                    + (
-                        additional_demand_upper_bound
-                        - additional_demand_lower_bound
-                    )
+                    + (additional_demand_upper_bound - additional_demand_lower_bound)
                     / 2
                 )
 
@@ -71,10 +59,7 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
                 additional_demand_lower_bound = additional_demand
                 additional_demand = (
                     additional_demand_lower_bound
-                    + (
-                        additional_demand_upper_bound
-                        - additional_demand_lower_bound
-                    )
+                    + (additional_demand_upper_bound - additional_demand_lower_bound)
                     / 2
                 )
 
