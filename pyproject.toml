@@ -15,6 +15,7 @@ black = "^22.8.0"
 pandas = "^1.4.4"
 openpyxl = "^3.0.10"
 dask = "^2023.1.0"
+xarray = "^2023.2.0"
 
 
 [build-system]
