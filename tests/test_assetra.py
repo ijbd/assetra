@@ -816,16 +816,12 @@ class TestResourceContribution(unittest.TestCase):
 
         # target system
         e1 = EnergySystem()
-        u1 = StaticUnit(
-            id=1, nameplate_capacity=1, hourly_capacity=np.array([0, 0, -1, 0])
-        )
+        u1 = StaticUnit(id=1, nameplate_capacity=1, hourly_capacity=[0, 0, -1, 0])
         e1.add_unit(u1)
 
         # additional system
         e2 = EnergySystem()
-        u2 = StaticUnit(
-            id=1, nameplate_capacity=1, hourly_capacity=np.array([1, 1, 1, 1])
-        )
+        u2 = StaticUnit(id=1, nameplate_capacity=1, hourly_capacity=[1, 1, 1, 1])
         e2.add_unit(u2)
 
         # simulation

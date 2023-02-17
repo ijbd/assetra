@@ -7,7 +7,6 @@ sys.path.append("..")
 # internal
 from assetra.core import EnergySystem, StaticUnit, StochasticUnit, StorageUnit
 from assetra.probabilistic_analysis import ProbabilisticSimulation
-from assetra.adequacy_metrics import ExpectedUnservedEnergy
 
 # external
 import xarray as xr
