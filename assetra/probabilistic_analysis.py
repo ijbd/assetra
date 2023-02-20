@@ -1,7 +1,7 @@
 from datetime import datetime
 
 # package
-from assetra.core import EnergySystem
+from assetra.energy_system import EnergySystem
 
 # external
 import numpy as np
@@ -25,35 +25,37 @@ class ProbabilisticSimulation:
         self._trial_size = trial_size
 
     def run(self):
+        # aggregate static units 
+        net_hourly_capacity_matrix = static_units['hourly capacity'].sum(dim='energy_unit')
 
+        # sample outages for stochastic units
+        net_hourly_capacity_matrix += stochastic_units['hourly capacity'].where(
+            np.random((self._trial_size, stochastic_units.sizes['energy unit'], stochastic_units.sizes['time']))
+            > stochastic_units['hourly_forced_outage_rates']
+            ).sum(dim='energy_unit')
+
+        # sequential operation
+        for unit in sequential_units:
+            for net_hourly_capacity in net_hourly_capacity_matrix:
+                net_hourly_capacity += unit.get_hourly_capacity(net_hourly_capacity)
+
+        '''
         time_stamps = xr.date_range(
             self._start_hour, self._end_hour, freq="H", inclusive="both"
         )
 
+         # initialize net capacity matrix
+        self.net_hourly_capacity_matrix = xr.DataArray(
+            data=np.zeros((self._trial_size, len(time_stamps))),
+            coords=dict(trial=np.arange(self._trial_size), time=time_stamps),
+        )
         # initialize capacity matrix
         self.hourly_capacity_matrix = xr.DataArray(
-            data=np.zeros(
-                (self._trial_size, self._energy_system.size, len(time_stamps))
-            ),
+            data=np.zeros((self._trial_size, self._energy_system.size, len(time_stamps))),
             coords=dict(
                 trial=np.arange(self._trial_size),
                 energy_unit=[u.id for u in self._energy_system.energy_units],
                 time=time_stamps,
             ),
         )
-
-        # initialize net capacity matrix
-        self.net_hourly_capacity_matrix = xr.DataArray(
-            data=np.zeros((self._trial_size, len(time_stamps))),
-            coords=dict(trial=np.arange(self._trial_size), time=time_stamps),
-        )
-
-        # simulate resource adequacy
-        for trial in range(self._trial_size):
-            self.hourly_capacity_matrix.loc[
-                trial
-            ] = self._energy_system.get_hourly_capacity_by_unit(
-                self._start_hour,
-                self._end_hour,
-                self.net_hourly_capacity_matrix.loc[trial],
-            )
+        '''
