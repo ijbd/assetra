@@ -25,8 +25,20 @@ class ProbabilisticSimulation:
         self._trial_size = trial_size
 
     def run(self):
+
+        # setup net hourly capacity matrix
+        time_stamps = xr.date_range(
+            self._start_hour, self._end_hour, freq="H", inclusive="both"
+        )
+        
+        # initialize net capacity matrix
+        self.net_hourly_capacity_matrix = xr.DataArray(
+            data=np.zeros((self._trial_size, len(time_stamps))),
+            coords=dict(trial=np.arange(self._trial_size), time=time_stamps),
+        )
+
         # aggregate static units 
-        net_hourly_capacity_matrix = static_units['hourly capacity'].sum(dim='energy_unit')
+        net_hourly_capacity_matrix += static_units['hourly capacity'].sum(dim='energy_unit')
 
         # sample outages for stochastic units
         net_hourly_capacity_matrix += stochastic_units['hourly capacity'].where(

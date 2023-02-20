@@ -1,7 +1,9 @@
 from __future__ import annotations
 from abc import abstractmethod, ABC
 from logging import getLogger
-from datetime import datetime, timedelta
+from datetime import datetime
+from dataclasses import dataclass
+from typing import List
 
 # external
 import numpy as np
@@ -12,165 +14,94 @@ log = getLogger(__name__)
 # ENERGY UNIT(S)
 
 
+@dataclass(frozen=True)
 class EnergyUnit(ABC):
-    def __init__(self, id: int, nameplate_capacity: float):
-        self._id = id
-        self._nameplate_capacity = nameplate_capacity
+    nameplate_capacity: float
 
-    # READ-ONLY VARIABLES
-
-    @property
-    def nameplate_capacity(self):
-        return self._nameplate_capacity
-
-    @property
-    def id(self):
-        return self._id
-
-    # METHODS
-
+    @staticmethod
     @abstractmethod
-    def get_hourly_capacity(
-        self,
-        start_hour: datetime,
-        end_hour: datetime,
-        net_hourly_capacity: xr.DataArray = None,
-    ):
-        """Returns a single instance of the hourly capacity of the
-        generating unit."""
+    def to_unit_dataset(units: List[EnergyUnit]):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def from_unit_dataset(dataset: xr.Dataset):
         pass
 
 
+@dataclass(frozen=True)
 class StaticUnit(EnergyUnit):
-    """Class responsible for returning capacity profile of non-stochastic units
-    (i.e. system loads)."""
+    hourly_capacity: xr.DataArray
 
-    def __init__(
-        self, id: int, nameplate_capacity: float, hourly_capacity: xr.DataArray
-    ):
-        EnergyUnit.__init__(self, id, nameplate_capacity)
-        self._hourly_capacity = hourly_capacity
+    @staticmethod
+    def to_unit_dataset(units: List[StaticUnit]):
+        # check for static units
+        if len(units) == 0:
+            log.info('No static units available. Skipping build.')
+            return None
 
-    def get_hourly_capacity(
-        self,
-        start_hour: datetime,
-        end_hour: datetime,
-        net_hourly_capacity: xr.DataArray = None,
-    ):
-        return self._hourly_capacity.sel(time=slice(start_hour, end_hour))
-
-
-class DemandUnit(StaticUnit):
-    """Class responsible for returning capacity profile of fixed demand units
-    (i.e. system loads)."""
-
-    def __init__(self, id: int, hourly_demand: xr.DataArray):
-        StaticUnit.__init__(
-            self, id, nameplate_capacity=0, hourly_capacity=-hourly_demand
+        # build dataset
+        unit_dataset = xr.DataSet(
+            data_vars=dict(
+                nameplate_capacity=(['energy_unit'], [unit.nameplate_capacity for unit in units]),
+                hourly_capacity=(['energy_unit', 'time'], [unit.hourly_capacity for unit in units])
+            ),
+            coords=dict(
+                energy_unit=[unit.id for unit in units],
+                time=units[0].time if len(units) > 0 else []
+            )
         )
 
-
-class ConstantDemandUnit(EnergyUnit):
-    def __init__(self, id: int, demand: float):
-        EnergyUnit.__init__(self, id, nameplate_capacity=0)
-        self._capacity = -demand
-
-    @property
-    def demand(self):
-        return -self._capacity
-
-    @demand.setter
-    def demand(self, new_demand):
-        self._capacity = -float(new_demand)
-
-    def get_hourly_capacity(
-        self,
-        start_hour: datetime,
-        end_hour: datetime,
-        net_hourly_capacity: xr.DataArray = None,
-    ):
-        time_stamps = time = xr.date_range(
-            start=start_hour, end=end_hour, freq="H", inclusive="both"
-        )
-        return (
-            xr.DataArray(data=np.ones(len(time_stamps)), coords=dict(time=time_stamps))
-            * self._capacity
-        )
+        return unit_dataset
 
 
+@dataclass(frozen=True)
 class StochasticUnit(EnergyUnit):
-    """Class responsible for returning capacity profile of
-    stochastically-sampled units (i.e. generators)."""
+    hourly_capacity: xr.DataArray
+    hourly_forced_outage_rate: xr.DataArray
 
-    def __init__(
-        self,
-        id: int,
-        nameplate_capacity: float,
-        hourly_capacity: xr.DataArray,
-        hourly_forced_outage_rate: xr.DataArray,
-    ):
-        # initialize base class variables
-        EnergyUnit.__init__(self, id, nameplate_capacity)
-        # initialize stochastic specific variables
-        self._hourly_capacity = hourly_capacity
-        self._hourly_forced_outage_rate = hourly_forced_outage_rate
+    @staticmethod
+    def to_unit_dataset(units: List[StochasticUnit]):
+        unit_dataset = xr.DataSet(
+            data_vars=dict(
+                nameplate_capacity=(['energy_unit'], [unit.nameplate_capacity for unit in units]),
+                hourly_capacity=(['energy_unit', 'time'], [unit.hourly_capacity for unit in units]),
+                hourly_forced_outage_rate=(['energy_unit', 'time'], [unit.hourly_forced_outage_rate for unit in units])
+            ),
+            coords=dict(
+                energy_unit=[unit.id for unit in units],
+                time=units[0].time if len(units) > 0 else []
+            )
+        )
+
+        return unit_dataset
+
+
+@dataclass(frozen=True)
+class SequentialUnit(EnergyUnit):
+
+    @abstractmethod
+    def get_hourly_capacity(self, net_hourly_capacity):
+        pass
+
+
+@dataclass(frozen=True)
+class StorageUnit(SequentialUnit):
+    charge_rate: float
+    discharge_rate: float
+    duration: float
+    roundtrip_efficiency: float
+
+    def __post_init__(self):
+        self.charge_capacity = self.discharge_rate * self.duration
+        self.efficiency = self.roundtrip_efficiency**0.5
 
     def get_hourly_capacity(
         self,
-        start_hour: datetime,
-        end_hour: datetime,
-        net_hourly_capacity: xr.DataArray = None,
+        net_hourly_capacity: xr.DataArray
     ):
-        # slice time-series
-        hourly_capacity_slice = self._hourly_capacity.sel(
-            time=slice(start_hour, end_hour)
-        )
-        hourly_forced_outage_rate_slice = self._hourly_forced_outage_rate.sel(
-            time=slice(start_hour, end_hour)
-        )
-
-        # draw random samples
-        hourly_outage_samples = np.random.random_sample(
-            len(hourly_forced_outage_rate_slice)
-        )
-        return hourly_capacity_slice.where(
-            hourly_outage_samples > hourly_forced_outage_rate_slice, 0
-        )
-
-
-class StorageUnit(EnergyUnit):
-    """Class responsible for returning capacity profile of state-limited
-    storage units"""
-
-    def __init__(
-        self,
-        id: int,
-        charge_rate: float,
-        discharge_rate: float,
-        duration: float,
-        roundtrip_efficiency: float,
-    ):
-        EnergyUnit.__init__(
-            self,
-            id,
-            nameplate_capacity=discharge_rate,
-        )
-        self._charge_rate = charge_rate
-        self._discharge_rate = discharge_rate
-        self._charge_capacity = discharge_rate * duration
-        self._efficiency = roundtrip_efficiency**0.5
-
-    def get_hourly_capacity(
-        self,
-        start_hour: datetime,
-        end_hour: datetime,
-        net_hourly_capacity: xr.DataArray,
-    ):
-        # slice net capacity
-        net_hourly_capacity = net_hourly_capacity.sel(time=slice(start_hour, end_hour))
-
         # initialize full storage unit
-        current_charge = self._charge_capacity
+        current_charge = self.charge_capacity
         hourly_capacity = xr.zeros_like(net_hourly_capacity)
 
         # simulate dispatch
@@ -218,23 +149,39 @@ class StorageUnit(EnergyUnit):
 
         return capacity * self._efficiency, current_charge
 
+    @staticmethod
+    def to_unit_dataset(units: List[StaticUnit]):
+        # check for storage units
+        if len(units) == 0:
+            log.info('No storage units available. Skipping build.')
+            return None
+
+        # build dataset
+        unit_dataset = xr.DataSet(
+            data_vars=dict(
+                charge_rate=(['energy_unit'], [unit.charge_rate for unit in units]),
+                discharge_rate=(['energy_unit'], [unit.discharge_rate for unit in units]),
+                duration=(['energy_unit'], [unit.duration for unit in units]),
+                roundtrip_efficiency=(['energy_unit'], [unit.roundtrip_efficiency for unit in units]),
+            ),
+            coords=dict(
+                energy_unit=[unit.id for unit in units]
+            )
+        )
+
+        return unit_dataset
+    
 
 # ENERGY SYSTEM
-
 
 class EnergySystem:
     """Class responsible for managing energy units."""
 
-    unit_dispatch_order = {
-        DemandUnit: 0,
-        StaticUnit: 1,
-        ConstantDemandUnit: 2,
-        StochasticUnit: 3,
-        StorageUnit: 4,
-    }
+    '''IJBD 02-20-2023: WORKING ON ADDING LOGIC FOR BUILDING UNIT DATASETS'''
 
     def __init__(self):
         self._energy_units = []
+        self._modified = False
 
     @property
     def size(self):
@@ -248,19 +195,26 @@ class EnergySystem:
     def energy_units(self):
         return tuple(self._energy_units)
 
+    @property
+    def energy_unit_datasets(self):
+        if self._modified:
+            self.build()
+            return self._energy_unit_datasets
+
     def add_unit(self, energy_unit: EnergyUnit):
+        # TODO check for valid energy unit
+        
         # check for duplicates
         if energy_unit.id in [u.id for u in self._energy_units]:
             raise RuntimeError("Duplicate unit placed in energy system.")
 
         # add unit to internal list
         self._energy_units.append(energy_unit)
-
-        # sort by energy unit type
-        self._energy_units.sort(key=lambda u: self.unit_dispatch_order[type(u)])
+        self._modified = True
 
     def remove_unit(self, energy_unit: EnergyUnit):
         self._energy_units.remove(energy_unit)
+        self._modified = True
 
     def add_system(self, other: EnergySystem):
         for energy_unit in other._energy_units:
@@ -270,34 +224,14 @@ class EnergySystem:
         for energy_unit in other._energy_units:
             self.remove_unit(energy_unit)
 
-    def get_hourly_capacity_by_unit(
-        self,
-        start_hour: datetime,
-        end_hour: datetime,
-        net_hourly_capacity: xr.DataArray = None,
-    ):
+    def build(self):
 
-        # initialize matrices
-        time_stamps = xr.date_range(start_hour, end_hour, freq="H", inclusive="both")
-        hourly_capacity_by_unit = xr.DataArray(
-            data=np.zeros((self.size, len(time_stamps))),
-            coords=dict(
-                energy_unit=[u.id for u in self._energy_units], time=time_stamps
-            ),
-        )
+        # update modified flag
+        self._modified = False
 
-        # check for passed net capacity series
-        if net_hourly_capacity is None:
-            net_hourly_capacity = xr.DataArray(
-                data=np.zeros(len(time_stamps)), coords=dict(time=time_stamps)
-            )
+    def save(self, file):
+        pass 
 
-        # iterate through dispatch
-        for energy_unit in self._energy_units:
-            hourly_capacity_inst = energy_unit.get_hourly_capacity(
-                start_hour, end_hour, net_hourly_capacity
-            )
-            hourly_capacity_by_unit.loc[energy_unit.id] = hourly_capacity_inst
-            net_hourly_capacity += hourly_capacity_inst
+    def load(self, file):
+        pass
 
-        return hourly_capacity_by_unit
