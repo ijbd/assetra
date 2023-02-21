@@ -4,6 +4,7 @@ from logging import getLogger
 from datetime import datetime
 from dataclasses import dataclass
 from typing import List
+from collections import namedtuple
 
 # external
 import numpy as np
@@ -13,9 +14,9 @@ log = getLogger(__name__)
 
 # ENERGY UNIT(S)
 
-
 @dataclass(frozen=True)
 class EnergyUnit(ABC):
+    id: int
     nameplate_capacity: float
 
     @staticmethod
@@ -25,7 +26,12 @@ class EnergyUnit(ABC):
 
     @staticmethod
     @abstractmethod
-    def from_unit_dataset(dataset: xr.Dataset):
+    def from_unit_dataset(unit_dataset: xr.Dataset):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def get_probabilistic_capacity_matrix(unit_dataset: xr.Dataset, start_hour: datetime, end_hour: datetime, trials: int, net_hourly_capacity_matrix: xr.DataArray):
         pass
 
 
@@ -35,24 +41,31 @@ class StaticUnit(EnergyUnit):
 
     @staticmethod
     def to_unit_dataset(units: List[StaticUnit]):
-        # check for static units
-        if len(units) == 0:
-            log.info('No static units available. Skipping build.')
-            return None
-
         # build dataset
-        unit_dataset = xr.DataSet(
+        unit_dataset = xr.Dataset(
             data_vars=dict(
                 nameplate_capacity=(['energy_unit'], [unit.nameplate_capacity for unit in units]),
                 hourly_capacity=(['energy_unit', 'time'], [unit.hourly_capacity for unit in units])
             ),
             coords=dict(
                 energy_unit=[unit.id for unit in units],
-                time=units[0].time if len(units) > 0 else []
+                time=units[0].hourly_capacity.time if len(units) > 0 else []
             )
         )
 
         return unit_dataset
+    
+    @staticmethod
+    def from_unit_dataset(unit_dataset: xr.Dataset):
+        # TODO
+        pass
+    
+    @staticmethod
+    def get_probabilistic_capacity_matrix(unit_dataset: xr.Dataset, start_hour: datetime, end_hour: datetime, trials: int, net_hourly_capacity_matrix: xr.DataArray):
+        # time-indexing
+        unit_dataset = unit_dataset.sel(time=slice(start_hour, end_hour))
+
+        return unit_dataset.sel(time=slice(start_hour, end_hour))['hourly_capacity'].sum(dim='energy_unit')
 
 
 @dataclass(frozen=True)
@@ -62,7 +75,7 @@ class StochasticUnit(EnergyUnit):
 
     @staticmethod
     def to_unit_dataset(units: List[StochasticUnit]):
-        unit_dataset = xr.DataSet(
+        unit_dataset = xr.Dataset(
             data_vars=dict(
                 nameplate_capacity=(['energy_unit'], [unit.nameplate_capacity for unit in units]),
                 hourly_capacity=(['energy_unit', 'time'], [unit.hourly_capacity for unit in units]),
@@ -70,11 +83,28 @@ class StochasticUnit(EnergyUnit):
             ),
             coords=dict(
                 energy_unit=[unit.id for unit in units],
-                time=units[0].time if len(units) > 0 else []
+                time=units[0].hourly_capacity.time if len(units) > 0 else []
             )
         )
-
         return unit_dataset
+    
+    @staticmethod
+    def from_unit_dataset(unit_dataset: xr.Dataset):
+        # TODO
+        pass
+    
+    @staticmethod
+    def get_probabilistic_capacity_matrix(unit_dataset: xr.Dataset, start_hour: datetime, end_hour: datetime, trials: int, net_hourly_capacity_matrix: xr.DataArray):
+        # time-indexing
+        unit_dataset = unit_dataset.sel(time=slice(start_hour, end_hour))
+
+        # sample outages
+        probabilistic_hourly_capacity = np.where(unit_dataset['hourly_capacity'].values, 
+            np.random.random_sample((trials, unit_dataset.sizes['energy_unit'], unit_dataset.sizes['time']))
+            > unit_dataset['hourly_forced_outage_rate'].values, 0
+            ).sum(axis=1)
+        
+        return probabilistic_hourly_capacity
 
 
 @dataclass(frozen=True)
@@ -92,15 +122,13 @@ class StorageUnit(SequentialUnit):
     duration: float
     roundtrip_efficiency: float
 
-    def __post_init__(self):
-        self.charge_capacity = self.discharge_rate * self.duration
-        self.efficiency = self.roundtrip_efficiency**0.5
-
     def get_hourly_capacity(
         self,
         net_hourly_capacity: xr.DataArray
     ):
         # initialize full storage unit
+        charge_capacity = self.discharge_rate * self.duration
+        efficiency = self.roundtrip_efficiency**0.5
         current_charge = self.charge_capacity
         hourly_capacity = xr.zeros_like(net_hourly_capacity)
 
@@ -150,14 +178,9 @@ class StorageUnit(SequentialUnit):
         return capacity * self._efficiency, current_charge
 
     @staticmethod
-    def to_unit_dataset(units: List[StaticUnit]):
-        # check for storage units
-        if len(units) == 0:
-            log.info('No storage units available. Skipping build.')
-            return None
-
+    def to_unit_dataset(units: List[StorageUnit]):
         # build dataset
-        unit_dataset = xr.DataSet(
+        unit_dataset = xr.Dataset(
             data_vars=dict(
                 charge_rate=(['energy_unit'], [unit.charge_rate for unit in units]),
                 discharge_rate=(['energy_unit'], [unit.discharge_rate for unit in units]),
@@ -171,17 +194,42 @@ class StorageUnit(SequentialUnit):
 
         return unit_dataset
     
+    @staticmethod
+    def from_unit_dataset(unit_dataset: xr.Dataset):
+        # TODO
+        pass
+    
+    def get_probabilistic_capacity_matrix(unit_dataset: xr.Dataset, start_hour: datetime, end_hour: datetime, trials: int, net_hourly_capacity_matrix: xr.DataArray):
+        # TODO
+        pass
 
-# ENERGY SYSTEM
+
+VALID_UNIT_TYPES = [StaticUnit, StochasticUnit, StorageUnit]
+
 
 class EnergySystem:
-    """Class responsible for managing energy units."""
+    '''Class responsible for managing energy unit datasets'''
+    def __init__(self, unit_datasets: dict):
+        self.unit_datasets = unit_datasets
 
-    '''IJBD 02-20-2023: WORKING ON ADDING LOGIC FOR BUILDING UNIT DATASETS'''
+    def save(self, directory):
+        # TODO save datasets to directory
+        pass
+
+    def load(self, directory):
+        # TODO load datasets from directory
+        pass
+
+
+class EnergySystemBuilder:
+    """Class responsible for managing energy units."""
+    # TODO save/load from file
+    # TODO add logic to protect dataset only read
+    # TODO add hints to error messages
 
     def __init__(self):
         self._energy_units = []
-        self._modified = False
+        self._energy_unit_datasets = dict()
 
     @property
     def size(self):
@@ -195,14 +243,13 @@ class EnergySystem:
     def energy_units(self):
         return tuple(self._energy_units)
 
-    @property
-    def energy_unit_datasets(self):
-        if self._modified:
-            self.build()
-            return self._energy_unit_datasets
+    def get_units_by_type(self, unit_type: type) -> List[EnergyUnit]:
+        return tuple(unit for unit in self._energy_units if type(unit) == unit_type)
 
     def add_unit(self, energy_unit: EnergyUnit):
-        # TODO check for valid energy unit
+        # check for valid energy unit
+        if type(energy_unit) not in VALID_UNIT_TYPES:
+            raise RuntimeError("Invalid type added to energy system.")
         
         # check for duplicates
         if energy_unit.id in [u.id for u in self._energy_units]:
@@ -210,28 +257,23 @@ class EnergySystem:
 
         # add unit to internal list
         self._energy_units.append(energy_unit)
-        self._modified = True
 
     def remove_unit(self, energy_unit: EnergyUnit):
         self._energy_units.remove(energy_unit)
-        self._modified = True
 
-    def add_system(self, other: EnergySystem):
-        for energy_unit in other._energy_units:
-            self.add_unit(energy_unit)
+    def build(self) -> EnergySystem:
 
-    def remove_system(self, other: EnergySystem):
-        for energy_unit in other._energy_units:
-            self.remove_unit(energy_unit)
+        unit_datasets = dict()
+        
+        for unit_type in VALID_UNIT_TYPES:
+            units = self.get_units_by_type(unit_type)
+            if len(units) > 0:
+                unit_datasets[unit_type] = unit_type.to_unit_dataset(units)
 
-    def build(self):
+        return EnergySystem(unit_datasets)
 
-        # update modified flag
-        self._modified = False
-
-    def save(self, file):
-        pass 
-
-    def load(self, file):
+    @staticmethod
+    def from_energy_system(self, energy_system):
+        # TODO
         pass
 

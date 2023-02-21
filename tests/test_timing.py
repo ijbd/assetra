@@ -1,37 +1,35 @@
 import sys
 import argparse
-from datetime import datetime, timedelta
+import timeit
 
 sys.path.append("..")
 
 # internal
-from assetra.core import EnergySystem, StaticUnit, StochasticUnit, StorageUnit
+from assetra.core import EnergySystemBuilder, StaticUnit, StochasticUnit, StorageUnit
 from assetra.probabilistic_analysis import ProbabilisticSimulation
 
 # external
 import xarray as xr
 import numpy as np
 
+ES = None 
+PS = None 
 
-def test_assetra_timing(
+def setup(
     num_static_units: int,
     num_stochastic_units: int,
     num_storage_units: int,
-    num_hours,
-    num_trials: int,
-):
-    start_execution_time = datetime.now()
+    num_hours: int):
 
-    # create system
-    e = EnergySystem()
+    esb = EnergySystemBuilder()
     id_count = 0
 
     # add units
     for _ in range(num_static_units):
-        e.add_unit(
+        esb.add_unit(
             StaticUnit(
                 id=id_count,
-                nameplate_capacity=1,
+                nameplate_capacity=-1,
                 hourly_capacity=xr.DataArray(
                     data=np.ones(num_hours),
                     coords=dict(
@@ -45,7 +43,7 @@ def test_assetra_timing(
         id_count += 1
 
     for _ in range(num_stochastic_units):
-        e.add_unit(
+        esb.add_unit(
             StochasticUnit(
                 id=id_count,
                 nameplate_capacity=1,
@@ -70,9 +68,10 @@ def test_assetra_timing(
         id_count += 1
 
     for _ in range(num_storage_units):
-        e.add_unit(
+        esb.add_unit(
             StorageUnit(
                 id=id_count,
+                nameplate_capacity=1,
                 charge_rate=1,
                 discharge_rate=1,
                 duration=4,
@@ -81,32 +80,53 @@ def test_assetra_timing(
         )
         id_count += 1
 
+    global ES
+    ES = esb.build()
+
+def run(num_trials: int, num_hours: int):
+    global ES
+    global PS
+
     # setup simulation
     time_stamps = xr.date_range(
         start="2016-01-01 00:00:00", periods=num_hours, freq="1H"
     )
     start_time = time_stamps[0]
     end_time = time_stamps[-1]
-    ps = ProbabilisticSimulation(e, start_time, end_time, num_trials)
+
+    # time ps runtime
+    ps = ProbabilisticSimulation(ES, start_time, end_time, num_trials)
     ps.run()
 
-    print(f"--- execution: {datetime.now() - start_execution_time} ---")
+    
+def test_assetra_timing(
+    num_trials: int,
+    num_static_units: int,
+    num_stochastic_units: int,
+    num_storage_units: int,
+    num_hours: int,
+    n: int=10
+):
 
+    print(timeit.timeit(f'setup({num_static_units}, {num_stochastic_units}, {num_storage_units}, {num_hours})', number=1, globals=globals()))
+    
+    print(timeit.timeit(f'run({num_trials}, {num_hours})', number=n, globals=globals()) / n)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    
+    parser.add_argument("num_trials", type=int)
     parser.add_argument("num_static_units", type=int)
     parser.add_argument("num_stochastic_units", type=int)
     parser.add_argument("num_storage_units", type=int)
     parser.add_argument("num_hours", type=int)
-    parser.add_argument("num_trials", type=int)
 
     args = parser.parse_args()
 
     test_assetra_timing(
+        args.num_trials,
         args.num_static_units,
         args.num_stochastic_units,
         args.num_storage_units,
-        args.num_hours,
-        args.num_trials,
+        args.num_hours        
     )

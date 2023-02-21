@@ -1,7 +1,7 @@
 from abc import abstractmethod, ABC
 
 # package
-from assetra.energy_system import EnergySystem
+from assetra.core import EnergySystem
 from assetra.probabilistic_analysis import ProbabilisticSimulation
 from assetra.adequacy_metrics import ResourceAdequacyMetric
 
