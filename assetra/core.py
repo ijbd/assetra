@@ -209,9 +209,20 @@ VALID_UNIT_TYPES = [StaticUnit, StochasticUnit, StorageUnit]
 
 class EnergySystem:
     '''Class responsible for managing energy unit datasets'''
-    def __init__(self, unit_datasets: dict):
-        self.unit_datasets = unit_datasets
+    def __init__(self):
+        self.unit_datasets = dict()
 
+    def build(self, energy_units: List[EnergyUnit]):
+        for unit_type in VALID_UNIT_TYPES:
+            # get unit by type
+            units = [unit for unit in energy_units if type(unit) is unit_type]
+
+            # get unit dataset
+            if len(units) > 0:
+                unit_datasets[unit_type] = unit_type.to_unit_dataset(units)
+
+        return None
+    
     def save(self, directory):
         # TODO save datasets to directory
         pass
@@ -223,28 +234,10 @@ class EnergySystem:
 
 class EnergySystemBuilder:
     """Class responsible for managing energy units."""
-    # TODO save/load from file
-    # TODO add logic to protect dataset only read
     # TODO add hints to error messages
 
     def __init__(self):
         self._energy_units = []
-        self._energy_unit_datasets = dict()
-
-    @property
-    def size(self):
-        return len(self._energy_units)
-
-    @property
-    def capacity(self):
-        return sum([u.nameplate_capacity for u in self._energy_units])
-
-    @property
-    def energy_units(self):
-        return tuple(self._energy_units)
-
-    def get_units_by_type(self, unit_type: type) -> List[EnergyUnit]:
-        return tuple(unit for unit in self._energy_units if type(unit) == unit_type)
 
     def add_unit(self, energy_unit: EnergyUnit):
         # check for valid energy unit
@@ -261,19 +254,13 @@ class EnergySystemBuilder:
     def remove_unit(self, energy_unit: EnergyUnit):
         self._energy_units.remove(energy_unit)
 
-    def build(self) -> EnergySystem:
-
-        unit_datasets = dict()
-        
-        for unit_type in VALID_UNIT_TYPES:
-            units = self.get_units_by_type(unit_type)
-            if len(units) > 0:
-                unit_datasets[unit_type] = unit_type.to_unit_dataset(units)
-
-        return EnergySystem(unit_datasets)
+    def build_system(self):
+        system = EnergySystem()
+        system.build(self._energy_units)
+        return system
 
     @staticmethod
-    def from_energy_system(self, energy_system):
+    def from_energy_system(energy_system):
         # TODO
         pass
 
