@@ -74,7 +74,7 @@ def setup(
                 nameplate_capacity=1,
                 charge_rate=1,
                 discharge_rate=1,
-                duration=4,
+                charge_capacity=4,
                 roundtrip_efficiency=0.8,
             )
         )
@@ -93,11 +93,9 @@ def run(num_trials: int, num_hours: int):
     )
     start_time = time_stamps[0]
     end_time = time_stamps[-1]
-
     # time ps runtime
     ps = ProbabilisticSimulation(ES, start_time, end_time, num_trials)
     ps.run()
-
     
 def test_assetra_timing(
     num_trials: int,
@@ -105,12 +103,12 @@ def test_assetra_timing(
     num_stochastic_units: int,
     num_storage_units: int,
     num_hours: int,
-    n: int=10
+    n: int=1
 ):
 
-    print(timeit.timeit(f'setup({num_static_units}, {num_stochastic_units}, {num_storage_units}, {num_hours})', number=1, globals=globals()))
+    print('setup:', timeit.timeit(f'setup({num_static_units}, {num_stochastic_units}, {num_storage_units}, {num_hours})', number=1, globals=globals()))
     
-    print(timeit.timeit(f'run({num_trials}, {num_hours})', number=n, globals=globals()) / n)
+    print('run:', timeit.timeit(f'run({num_trials}, {num_hours})', number=n, globals=globals()) / n)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

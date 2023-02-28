@@ -23,25 +23,26 @@ class ProbabilisticSimulation:
         self.start_hour = start_hour
         self.end_hour = end_hour
         self.trial_size = trial_size
-
+       
     def run(self):
+        # TODO add loading point for pre-computed fleet capacities
 
         # setup net hourly capacity matrix
         time_stamps = xr.date_range(
             self.start_hour, self.end_hour, freq="H", inclusive="both"
+        )
+
+        # initialize capacity by unit type
+        unit_types = list(self.energy_system.unit_datasets)
+        self.hourly_capacity_matrix = xr.DataArray(
+            data=np.zeros((self.trial_size, len(unit_types), len(time_stamps))),
+            coords=dict(trial=np.arange(self.trial_size), unit_type=unit_types, time=time_stamps)
         )
         
         # initialize net capacity matrix
         self.net_hourly_capacity_matrix = xr.DataArray(
             data=np.zeros((self.trial_size, len(time_stamps))),
             coords=dict(trial=np.arange(self.trial_size), time=time_stamps),
-        )
-
-        # get capacity by unit type
-        unit_types = list(self.energy_system.unit_datasets)
-        self.hourly_capacity_matrix = xr.DataArray(
-            data=np.zeros((self.trial_size, len(unit_types), len(time_stamps))),
-            coords=dict(trial=np.arange(self.trial_size), unit_type=unit_types, time=time_stamps)
         )
 
         # iterate through unit datasets

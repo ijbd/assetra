@@ -2,9 +2,10 @@ from __future__ import annotations
 from abc import abstractmethod, ABC
 from logging import getLogger
 from datetime import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import List
 from collections import namedtuple
+from pathlib import Path
 
 # external
 import numpy as np
@@ -31,7 +32,7 @@ class EnergyUnit(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_probabilistic_capacity_matrix(unit_dataset: xr.Dataset, start_hour: datetime, end_hour: datetime, trials: int, net_hourly_capacity_matrix: xr.DataArray):
+    def get_probabilistic_capacity_matrix(unit_dataset: xr.Dataset, net_hourly_capacity_matrix: xr.DataArray):
         pass
 
 @dataclass(frozen=True)
@@ -40,6 +41,7 @@ class StaticUnit(EnergyUnit):
 
     @staticmethod
     def to_unit_dataset(units: List[StaticUnit]) -> xr.Dataset:
+        # TODO check consistent timeframes or auto-fill zeros
         # build dataset
         unit_dataset = xr.Dataset(
             data_vars=dict(
@@ -62,8 +64,8 @@ class StaticUnit(EnergyUnit):
         for id in unit_dataset.energy_unit:
             units.append(
                 StaticUnit(
-                    id,
-                    unit_dataset.nameplate_capacity.loc[id],
+                    int(id),
+                    int(unit_dataset.nameplate_capacity.loc[id]),
                     unit_dataset.hourly_capacity.loc[id]
                 )
             )
@@ -71,9 +73,9 @@ class StaticUnit(EnergyUnit):
         return units
     
     @staticmethod
-    def get_probabilistic_capacity_matrix(unit_dataset: xr.Dataset, start_hour: datetime, end_hour: datetime, trials: int, net_hourly_capacity_matrix: xr.DataArray):
+    def get_probabilistic_capacity_matrix(unit_dataset: xr.Dataset, net_hourly_capacity_matrix: xr.DataArray):
         # time-indexing
-        unit_dataset = unit_dataset.sel(time=slice(start_hour, end_hour))
+        unit_dataset = unit_dataset.sel(time=net_hourly_capacity_matrix.time)
 
         # sum across capacity units
         probabilistic_capacity_matrix = unit_dataset['hourly_capacity'].sum(dim='energy_unit')
@@ -90,6 +92,7 @@ class StochasticUnit(EnergyUnit):
 
     @staticmethod
     def to_unit_dataset(units: List[StochasticUnit]):
+        # TODO check consistent timeframes or auto-fill zeros
         unit_dataset = xr.Dataset(
             data_vars=dict(
                 nameplate_capacity=(['energy_unit'], [unit.nameplate_capacity for unit in units]),
@@ -121,12 +124,12 @@ class StochasticUnit(EnergyUnit):
         return units
     
     @staticmethod
-    def get_probabilistic_capacity_matrix(unit_dataset: xr.Dataset, start_hour: datetime, end_hour: datetime, trials: int, net_hourly_capacity_matrix: xr.DataArray):
+    def get_probabilistic_capacity_matrix(unit_dataset: xr.Dataset, net_hourly_capacity_matrix: xr.DataArray):
         # time-indexing
-        unit_dataset = unit_dataset.sel(time=slice(start_hour, end_hour))
+        unit_dataset = unit_dataset.sel(time=net_hourly_capacity_matrix.time)
 
         # sample outages
-        probabilistic_capacity_matrix = np.where(np.random.random_sample((trials, unit_dataset.sizes['energy_unit'], unit_dataset.sizes['time']))
+        probabilistic_capacity_matrix = np.where(np.random.random_sample((net_hourly_capacity_matrix.sizes['trial'], unit_dataset.sizes['energy_unit'], unit_dataset.sizes['time']))
             > unit_dataset['hourly_forced_outage_rate'].values, unit_dataset['hourly_capacity'].values, 0
             ).sum(axis=1)
         
@@ -142,7 +145,7 @@ class StorageUnit(EnergyUnit):
     charge_capacity: float
     roundtrip_efficiency: float
 
-    def get_hourly_capacity(
+    def _get_hourly_capacity(
         charge_rate: float,
         discharge_rate: float,
         charge_capacity: float,
@@ -152,7 +155,6 @@ class StorageUnit(EnergyUnit):
         # TODO skip irrelevant days for average-case speed-up
         # initialize full storage unit
         efficiency = roundtrip_efficiency**0.5
-        current_charge = charge_capacity
 
         def charge_storage(excess_capacity: float, current_charge: float):
             capacity = -min(
@@ -162,7 +164,7 @@ class StorageUnit(EnergyUnit):
             )
             current_charge -= capacity * efficiency
 
-            return capacity
+            return capacity, current_charge
         
         def discharge_storage(unmet_demand: float, current_charge: float):
             capacity = min(
@@ -172,19 +174,20 @@ class StorageUnit(EnergyUnit):
             )
             current_charge -= capacity
 
-            return capacity * efficiency
+            return capacity * efficiency, current_charge
 
 
         def dispatch_storage(net_hourly_capacity: float):
-            current_charge = charge_capacity
+            current_charge = float(charge_capacity)
 
-            for net_capacity in net_hourly_capacity:
+            for net_capacity in net_hourly_capacity.values:
                 capacity = 0
-                if net_capacity < 0 and current_charge > 0:
-                    # unmet demand and avaiable charge
-                    capacity, current_charge = discharge_storage(
-                        -net_capacity, current_charge
-                    )
+                if net_capacity < 0:
+                    if current_charge > 0:
+                        # unmet demand and avaiable charge
+                        capacity, current_charge = discharge_storage(
+                            -net_capacity, current_charge
+                        )
                 elif current_charge < charge_capacity:
                     # excess capacity and not fully charged
                     capacity, current_charge = charge_storage(
@@ -204,6 +207,7 @@ class StorageUnit(EnergyUnit):
         # build dataset
         unit_dataset = xr.Dataset(
             data_vars=dict(
+                nameplate_capacity=(['energy_unit'], [unit.nameplate_capacity for unit in units]),
                 charge_rate=(['energy_unit'], [unit.charge_rate for unit in units]),
                 discharge_rate=(['energy_unit'], [unit.discharge_rate for unit in units]),
                 charge_capacity=(['energy_unit'], [unit.charge_capacity for unit in units]),
@@ -224,37 +228,41 @@ class StorageUnit(EnergyUnit):
         for id in unit_dataset.energy_unit:
             units.append(
                 StorageUnit(
-                    id,
-                    unit_dataset.nameplate_capacity.loc[id],
-                    unit_dataset.charge_rate.loc[id],
-                    unit_dataset.discharge_rate.loc[id],
-                    unit_dataset.charge_capacity.loc[id],
-                    unit_dataset.roundtrip_efficiency.loc[id]
+                    int(id),
+                    float(unit_dataset.nameplate_capacity.loc[id]),
+                    float(unit_dataset.charge_rate.loc[id]),
+                    float(unit_dataset.discharge_rate.loc[id]),
+                    float(unit_dataset.charge_capacity.loc[id]),
+                    float(unit_dataset.roundtrip_efficiency.loc[id])
                 )
             )
 
         return units
     
     @staticmethod
-    def get_probabilistic_capacity_matrix(unit_dataset: xr.Dataset, start_hour: datetime, end_hour: datetime, trials: int, net_hourly_capacity_matrix: xr.DataArray):
+    def get_probabilistic_capacity_matrix(unit_dataset: xr.Dataset, net_hourly_capacity_matrix: xr.DataArray):
+        units = StorageUnit.from_unit_dataset(unit_dataset)
+
         net_adj_hourly_capacity_matrix = net_hourly_capacity_matrix.copy()
-        for unit in unit_dataset.energy_unit:
+        for unit in units:
             for trial in net_adj_hourly_capacity_matrix:
-                trial += StorageUnit.get_hourly_capacity(
-                    unit_dataset.charge_rate.loc[unit],
-                    unit_dataset.discharge_rate.loc[unit],
-                    unit_dataset.charge_capacity.loc[unit],
-                    unit_dataset.roundtrip_efficiency.loc[unit],
+                trial += StorageUnit._get_hourly_capacity(
+                    unit.charge_rate,
+                    unit.discharge_rate,
+                    unit.charge_capacity,
+                    unit.roundtrip_efficiency,
                     trial
                 )
         
         return net_adj_hourly_capacity_matrix - net_hourly_capacity_matrix
 
+
 VALID_UNIT_TYPES = [StaticUnit, StochasticUnit, StorageUnit]
+
 
 class EnergySystem:
     '''Class responsible for managing energy unit datasets'''
-    def __init__(self, energy_units: List[EnergyUnit]):
+    def __init__(self, energy_units: List[EnergyUnit]=None):
         self.unit_datasets = dict()
         
         # populate unit datasets
@@ -267,14 +275,21 @@ class EnergySystem:
                 self.unit_datasets[unit_type] = unit_type.to_unit_dataset(units)
     
     def save(self, directory):
-        # TODO save datasets to directory
-        pass
+        for unit_type, dataset in self.unit_datasets.items():
+            dataset_file = Path(directory, unit_type.__name__+'.assetra.nc')
+            dataset.to_netcdf(dataset_file)
 
     def load(self, directory):
-        # TODO load datasets from directory
-        pass
+        self.unit_datasets = dict()
 
+        for dataset_file in Path(directory).glob('*.assetra.nc'):
+            # get unit type str (should be file prefix)
+            unit_type_str = dataset_file.name.split('.')[0]
 
+            # convert unit type str to valid unit type
+            unit_type = VALID_UNIT_TYPES[[VALID_UNIT_TYPES.__name__].find(unit_type_str)]
+            self.unit_datests[unit_type] = xr.open_dataset(dataset_file)
+    
 class EnergySystemBuilder:
     """Class responsible for managing energy units."""
     # TODO add hints to error messages
