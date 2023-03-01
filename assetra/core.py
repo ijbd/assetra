@@ -315,7 +315,7 @@ class EnergySystem:
     """Class responsible for managing energy unit datasets"""
 
     def __init__(self, energy_units: List[EnergyUnit] = []):
-        self.unit_datasets = dict()
+        self._unit_datasets = dict()
 
         # populate unit datasets
         for unit_type in VALID_UNIT_TYPES:
@@ -324,15 +324,19 @@ class EnergySystem:
 
             # get unit dataset
             if len(units) > 0:
-                self.unit_datasets[unit_type] = unit_type.to_unit_dataset(units)
+                self._unit_datasets[unit_type] = unit_type.to_unit_dataset(units)
+
+    @property
+    def unit_datasets(self):
+        return {k: v for k, v in self._unit_datasets.items()}
 
     def save(self, directory):
-        for unit_type, dataset in self.unit_datasets.items():
+        for unit_type, dataset in self._unit_datasets.items():
             dataset_file = Path(directory, unit_type.__name__ + ".assetra.nc")
             dataset.to_netcdf(dataset_file)
 
     def load(self, directory):
-        self.unit_datasets = dict()
+        self._unit_datasets = dict()
 
         for dataset_file in Path(directory).glob("*.assetra.nc"):
             # get unit type str (file prefix)
@@ -343,7 +347,7 @@ class EnergySystem:
             if unit_type_idx == -1:
                 raise RuntimeError("Invalid unit dataset found in directory.")
             unit_type = VALID_UNIT_TYPES[unit_type_idx]
-            self.unit_datasets[unit_type] = xr.open_dataset(dataset_file)
+            self._unit_datasets[unit_type] = xr.open_dataset(dataset_file)
 
 
 class EnergySystemBuilder:

@@ -8,23 +8,19 @@ import xarray as xr
 sys.path.append("..")
 
 
-def get_sample_time_series(data):
+def get_sample_time_series(data, start="2016-01-01 00:00"):
     return xr.DataArray(
         data=[float(d) for d in data],
-        coords=dict(
-            time=xr.date_range(start="2016-01-01 00:00", periods=len(data), freq="H")
-        ),
+        coords=dict(time=xr.date_range(start=start, periods=len(data), freq="H")),
     )
 
 
-def get_sample_net_capacity_matrix(data):
+def get_sample_net_capacity_matrix(data, start="2016-01-01 00:00"):
     return xr.DataArray(
         data=[[float(d) for d in row] for row in data],
         coords=dict(
             trial=[i for i in range(len(data))],
-            time=xr.date_range(
-                start="2016-01-01 00:00", periods=len(data[0]), freq="H"
-            ),
+            time=xr.date_range(start=start, periods=len(data[0]), freq="H"),
         ),
     )
 
@@ -101,7 +97,7 @@ class TestCore(unittest.TestCase):
         net_capacity_matrix = get_sample_net_capacity_matrix([[0, 0]])
 
         # test
-        expected = net_capacity_matrix.copy(data=[[1, 2]])
+        expected = get_sample_net_capacity_matrix([[1, 2]])
         observed = StaticUnit.get_probabilistic_capacity_matrix(
             unit_dataset, net_capacity_matrix
         )
@@ -190,7 +186,7 @@ class TestCore(unittest.TestCase):
         net_capacity_matrix = get_sample_net_capacity_matrix([[0, 0]])
 
         # test
-        expected = net_capacity_matrix.copy(data=[[1, 1]])
+        expected = get_sample_net_capacity_matrix([[1, 1]])
         observed = StochasticUnit.get_probabilistic_capacity_matrix(
             unit_dataset, net_capacity_matrix
         )
@@ -213,7 +209,7 @@ class TestCore(unittest.TestCase):
         net_capacity_matrix = get_sample_net_capacity_matrix([[0, 0]])
 
         # test
-        expected = net_capacity_matrix.copy(data=[[0, 0]])
+        expected = get_sample_net_capacity_matrix([[0, 0]])
         observed = StochasticUnit.get_probabilistic_capacity_matrix(
             unit_dataset, net_capacity_matrix
         )
@@ -236,7 +232,7 @@ class TestCore(unittest.TestCase):
         net_capacity_matrix = get_sample_net_capacity_matrix([[0, 0]])
 
         # test
-        expected = net_capacity_matrix.copy(data=[[1, 0]])
+        expected = get_sample_net_capacity_matrix([[1, 0]])
         observed = StochasticUnit.get_probabilistic_capacity_matrix(
             unit_dataset, net_capacity_matrix
         )
@@ -323,7 +319,7 @@ class TestCore(unittest.TestCase):
         net_capacity_matrix = get_sample_net_capacity_matrix([[-1, -1, -1, -1]])
 
         # test
-        expected = net_capacity_matrix.copy(data=[[1, 0, 0, 0]])
+        expected = get_sample_net_capacity_matrix([[1, 0, 0, 0]])
         observed = StorageUnit.get_probabilistic_capacity_matrix(
             unit_dataset, net_capacity_matrix
         )
@@ -348,7 +344,7 @@ class TestCore(unittest.TestCase):
         net_capacity_matrix = get_sample_net_capacity_matrix([[-2, -2, -2, -2]])
 
         # test
-        expected = net_capacity_matrix.copy(data=[[1, 1, 1, 0]])
+        expected = get_sample_net_capacity_matrix([[1, 1, 1, 0]])
         observed = StorageUnit.get_probabilistic_capacity_matrix(
             unit_dataset, net_capacity_matrix
         )
@@ -373,7 +369,7 @@ class TestCore(unittest.TestCase):
         net_capacity_matrix = get_sample_net_capacity_matrix([[-1, 1, 1, 1]])
 
         # test
-        expected = net_capacity_matrix.copy(data=[[1, -1, 0, 0]])
+        expected = get_sample_net_capacity_matrix([[1, -1, 0, 0]])
         observed = StorageUnit.get_probabilistic_capacity_matrix(
             unit_dataset, net_capacity_matrix
         )
@@ -398,7 +394,7 @@ class TestCore(unittest.TestCase):
         net_capacity_matrix = get_sample_net_capacity_matrix([[-1, 1, 1, 1, 1, 1]])
 
         # test
-        expected = net_capacity_matrix.copy(data=[[1, -1, -1, -1, -1, 0]])
+        expected = get_sample_net_capacity_matrix([[1, -1, -1, -1, -1, 0]])
         observed = StorageUnit.get_probabilistic_capacity_matrix(
             unit_dataset, net_capacity_matrix
         )
@@ -599,46 +595,28 @@ class TestCore(unittest.TestCase):
 class TestProbabilisticAnalysis(unittest.TestCase):
     def test_probabilistic_simulation_1(self):
         """Probabilistic simulation should generate hourly capacity matrix."""
-        return
         from assetra.core import EnergySystemBuilder, StaticUnit
         from assetra.probabilistic_analysis import ProbabilisticSimulation
 
         # create system
-        e = EnergySystemBuilder()
-        e.add_unit(
+        b = EnergySystemBuilder()
+        b.add_unit(
             StaticUnit(
                 id=1,
                 nameplate_capacity=1,
-                hourly_capacity=xr.DataArray(
-                    data=[1, 1, 2],
-                    coords=dict(
-                        time=xr.date_range(
-                            start="2016-01-01 00:00",
-                            end="2016-01-01 02:00",
-                            freq="H",
-                            inclusive="both",
-                        )
-                    ),
-                ),
+                hourly_capacity=get_sample_time_series([1, 0, 1]),
             )
         )
-        e.add_unit(
+        b.add_unit(
             StaticUnit(
                 id=2,
                 nameplate_capacity=2,
-                hourly_capacity=xr.DataArray(
-                    data=[2, 2, 1],
-                    coords=dict(
-                        time=xr.date_range(
-                            start="2016-01-01 00:00",
-                            end="2016-01-01 02:00",
-                            freq="H",
-                            inclusive="both",
-                        )
-                    ),
-                ),
+                hourly_capacity=get_sample_time_series([2, 1, 1]),
             )
         )
+
+        # build system
+        e = b.build()
 
         # create simulation
         ps = ProbabilisticSimulation(
@@ -647,86 +625,46 @@ class TestProbabilisticAnalysis(unittest.TestCase):
 
         # test
         ps.run()
-        expected = xr.DataArray(
-            data=[[[1, 1, 2], [2, 2, 1]]] * 3,
-            coords=dict(
-                trial=[0, 1, 2],
-                energy_unit=[1, 2],
-                time=xr.date_range(
-                    start="2016-01-01 00:00",
-                    end="2016-01-01 02:00",
-                    freq="H",
-                    inclusive="both",
-                ),
-            ),
-        )
-        observed = ps.hourly_capacity_matrix
+        expected = get_sample_net_capacity_matrix([[3, 1, 2]] * 3)
+        observed = ps.net_hourly_capacity_matrix
         self.assertTrue(expected.equals(observed))
 
     def test_probabilistic_simulation_2(self):
         """Probabilistic simulation should allow flexible time-indexing."""
-        return
         from assetra.core import EnergySystemBuilder, StaticUnit
         from assetra.probabilistic_analysis import ProbabilisticSimulation
 
         # create system
-        e = EnergySystemBuilder()
-        e.add_unit(
+        b = EnergySystemBuilder()
+        b.add_unit(
             StaticUnit(
                 id=1,
                 nameplate_capacity=1,
-                hourly_capacity=xr.DataArray(
-                    data=[1, 1, 2],
-                    coords=dict(
-                        time=xr.date_range(
-                            start="2016-01-01 00:00",
-                            end="2016-01-01 02:00",
-                            freq="H",
-                            inclusive="both",
-                        )
-                    ),
-                ),
+                hourly_capacity=get_sample_time_series([1, 0, 1]),
             )
         )
-        e.add_unit(
+        b.add_unit(
             StaticUnit(
                 id=2,
                 nameplate_capacity=2,
-                hourly_capacity=xr.DataArray(
-                    data=[2, 2, 1],
-                    coords=dict(
-                        time=xr.date_range(
-                            start="2016-01-01 00:00",
-                            end="2016-01-01 02:00",
-                            freq="H",
-                            inclusive="both",
-                        )
-                    ),
-                ),
+                hourly_capacity=get_sample_time_series([2, 1, 1]),
             )
         )
 
+        # build system
+        e = b.build()
+
         # create simulation
         ps = ProbabilisticSimulation(
-            e, start_hour="2016-01-01 01:00", end_hour="2016-01-01 02:00", trial_size=3
+            e, start_hour="2016-01-01 01:00", end_hour="2016-01-01 02:00", trial_size=4
         )
 
         # test
         ps.run()
-        expected = xr.DataArray(
-            data=[[[1, 2], [2, 1]]] * 3,
-            coords=dict(
-                trial=[0, 1, 2],
-                energy_unit=[1, 2],
-                time=xr.date_range(
-                    start="2016-01-01 01:00",
-                    end="2016-01-01 02:00",
-                    freq="H",
-                    inclusive="both",
-                ),
-            ),
+        expected = get_sample_net_capacity_matrix(
+            [[1, 2]] * 4, start="2016-01-01 01:00"
         )
-        observed = ps.hourly_capacity_matrix
+        observed = ps.net_hourly_capacity_matrix
         self.assertTrue(expected.equals(observed))
 
 
