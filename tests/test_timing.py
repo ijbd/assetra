@@ -12,14 +12,16 @@ from assetra.probabilistic_analysis import ProbabilisticSimulation
 import xarray as xr
 import numpy as np
 
-ES = None 
-PS = None 
+ES = None
+PS = None
+
 
 def setup(
     num_static_units: int,
     num_stochastic_units: int,
     num_storage_units: int,
-    num_hours: int):
+    num_hours: int,
+):
 
     esb = EnergySystemBuilder()
     id_count = 0
@@ -83,6 +85,7 @@ def setup(
     global ES
     ES = esb.build()
 
+
 def run(num_trials: int, num_hours: int):
     global ES
     global PS
@@ -96,23 +99,36 @@ def run(num_trials: int, num_hours: int):
     # time ps runtime
     ps = ProbabilisticSimulation(ES, start_time, end_time, num_trials)
     ps.run()
-    
+
+
 def test_assetra_timing(
     num_trials: int,
     num_static_units: int,
     num_stochastic_units: int,
     num_storage_units: int,
     num_hours: int,
-    n: int=1
+    n: int = 1,
 ):
 
-    print('setup:', timeit.timeit(f'setup({num_static_units}, {num_stochastic_units}, {num_storage_units}, {num_hours})', number=1, globals=globals()))
-    
-    print('run:', timeit.timeit(f'run({num_trials}, {num_hours})', number=n, globals=globals()) / n)
+    print(
+        "setup:",
+        timeit.timeit(
+            f"setup({num_static_units}, {num_stochastic_units}, {num_storage_units}, {num_hours})",
+            number=1,
+            globals=globals(),
+        ),
+    )
+
+    print(
+        "run:",
+        timeit.timeit(f"run({num_trials}, {num_hours})", number=n, globals=globals())
+        / n,
+    )
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    
+
     parser.add_argument("num_trials", type=int)
     parser.add_argument("num_static_units", type=int)
     parser.add_argument("num_stochastic_units", type=int)
@@ -126,5 +142,5 @@ if __name__ == "__main__":
         args.num_static_units,
         args.num_stochastic_units,
         args.num_storage_units,
-        args.num_hours        
+        args.num_hours,
     )

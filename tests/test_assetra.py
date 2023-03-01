@@ -7,17 +7,15 @@ import xarray as xr
 
 sys.path.append("..")
 
+
 def get_sample_time_series(data):
     return xr.DataArray(
         data=[float(d) for d in data],
         coords=dict(
-            time=xr.date_range(
-                start="2016-01-01 00:00",
-                periods=len(data),
-                freq="H"
-            )
-        )
+            time=xr.date_range(start="2016-01-01 00:00", periods=len(data), freq="H")
+        ),
     )
+
 
 def get_sample_net_capacity_matrix(data):
     return xr.DataArray(
@@ -25,46 +23,44 @@ def get_sample_net_capacity_matrix(data):
         coords=dict(
             trial=[i for i in range(len(data))],
             time=xr.date_range(
-                start="2016-01-01 00:00",
-                periods=len(data[0]),
-                freq="H"
-            )
-        )
+                start="2016-01-01 00:00", periods=len(data[0]), freq="H"
+            ),
+        ),
     )
 
-class TestCore(unittest.TestCase):
 
+class TestCore(unittest.TestCase):
     def test_static_unit_list_to_dataset(self):
         """Generate xarray dataset from unit list"""
         from assetra.core import StaticUnit
 
         # setup
         units = []
-        units.append(StaticUnit(
-            id=1,
-            nameplate_capacity=1,
-            hourly_capacity=get_sample_time_series([1, 2])
-        ))
-        units.append(StaticUnit(
-            id=2,
-            nameplate_capacity=1,
-            hourly_capacity=get_sample_time_series([3, 4])
-        ))
+        units.append(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([1, 2]),
+            )
+        )
+        units.append(
+            StaticUnit(
+                id=2,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([3, 4]),
+            )
+        )
 
         # test
         expected = xr.Dataset(
             data_vars=dict(
-                nameplate_capacity=(['energy_unit'], [1, 1]),
-                hourly_capacity=(['energy_unit', 'time'], [[1, 2], [3, 4]])
+                nameplate_capacity=(["energy_unit"], [1, 1]),
+                hourly_capacity=(["energy_unit", "time"], [[1, 2], [3, 4]]),
             ),
             coords=dict(
                 energy_unit=[1, 2],
-                time=xr.date_range(
-                    start="2016-01-01 00:00",
-                    periods=2,
-                    freq="H"
-                )
-            )
+                time=xr.date_range(start="2016-01-01 00:00", periods=2, freq="H"),
+            ),
         )
         observed = StaticUnit.to_unit_dataset(units)
         self.assertTrue(observed.equals(expected))
@@ -76,17 +72,13 @@ class TestCore(unittest.TestCase):
         # setup
         unit_dataset = xr.Dataset(
             data_vars=dict(
-                nameplate_capacity=(['energy_unit'], [1, 1]),
-                hourly_capacity=(['energy_unit', 'time'], [[1, 2], [3, 4]])
+                nameplate_capacity=(["energy_unit"], [1, 1]),
+                hourly_capacity=(["energy_unit", "time"], [[1, 2], [3, 4]]),
             ),
             coords=dict(
                 energy_unit=[1, 2],
-                time=xr.date_range(
-                    start="2016-01-01 00:00",
-                    periods=2,
-                    freq="H"
-                )
-            )
+                time=xr.date_range(start="2016-01-01 00:00", periods=2, freq="H"),
+            ),
         )
 
         # test
@@ -101,9 +93,7 @@ class TestCore(unittest.TestCase):
 
         # create unit
         unit = StaticUnit(
-            id=1,
-            nameplate_capacity=1,
-            hourly_capacity=get_sample_time_series([1, 2])
+            id=1, nameplate_capacity=1, hourly_capacity=get_sample_time_series([1, 2])
         )
         unit_dataset = StaticUnit.to_unit_dataset([unit])
 
@@ -111,8 +101,10 @@ class TestCore(unittest.TestCase):
         net_capacity_matrix = get_sample_net_capacity_matrix([[0, 0]])
 
         # test
-        expected=net_capacity_matrix.copy(data=[[1, 2]])
-        observed=StaticUnit.get_probabilistic_capacity_matrix(unit_dataset, net_capacity_matrix)
+        expected = net_capacity_matrix.copy(data=[[1, 2]])
+        observed = StaticUnit.get_probabilistic_capacity_matrix(
+            unit_dataset, net_capacity_matrix
+        )
         self.assertTrue(expected.equals(observed))
 
     def test_stochastic_unit_list_to_dataset(self):
@@ -120,34 +112,37 @@ class TestCore(unittest.TestCase):
         from assetra.core import StochasticUnit
 
         units = []
-        units.append(StochasticUnit(
-            id=1,
-            nameplate_capacity=1,
-            hourly_capacity=get_sample_time_series([1, 2]),
-            hourly_forced_outage_rate=get_sample_time_series([0.1, 0.2])
-        ))
-        units.append(StochasticUnit(
-            id=2,
-            nameplate_capacity=1,
-            hourly_capacity=get_sample_time_series([3, 4]),
-            hourly_forced_outage_rate=get_sample_time_series([0.3, 0.4])
-        ))
+        units.append(
+            StochasticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([1, 2]),
+                hourly_forced_outage_rate=get_sample_time_series([0.1, 0.2]),
+            )
+        )
+        units.append(
+            StochasticUnit(
+                id=2,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([3, 4]),
+                hourly_forced_outage_rate=get_sample_time_series([0.3, 0.4]),
+            )
+        )
 
         # test
         expected = xr.Dataset(
             data_vars=dict(
-                nameplate_capacity=(['energy_unit'], [1, 1]),
-                hourly_capacity=(['energy_unit', 'time'], [[1, 2], [3, 4]]),
-                hourly_forced_outage_rate=(['energy_unit', 'time'], [[0.1, 0.2], [0.3, 0.4]])
+                nameplate_capacity=(["energy_unit"], [1, 1]),
+                hourly_capacity=(["energy_unit", "time"], [[1, 2], [3, 4]]),
+                hourly_forced_outage_rate=(
+                    ["energy_unit", "time"],
+                    [[0.1, 0.2], [0.3, 0.4]],
+                ),
             ),
             coords=dict(
                 energy_unit=[1, 2],
-                time=xr.date_range(
-                    start="2016-01-01 00:00",
-                    periods=2,
-                    freq="H"
-                )
-            )
+                time=xr.date_range(start="2016-01-01 00:00", periods=2, freq="H"),
+            ),
         )
         observed = StochasticUnit.to_unit_dataset(units)
         self.assertTrue(observed.equals(expected))
@@ -159,18 +154,17 @@ class TestCore(unittest.TestCase):
         # setup
         unit_dataset = xr.Dataset(
             data_vars=dict(
-                nameplate_capacity=(['energy_unit'], [1, 1]),
-                hourly_capacity=(['energy_unit', 'time'], [[1, 2], [3, 4]]),
-                hourly_forced_outage_rate=(['energy_unit', 'time'], [[0.1, 0.2], [0.3, 0.4]])
+                nameplate_capacity=(["energy_unit"], [1, 1]),
+                hourly_capacity=(["energy_unit", "time"], [[1, 2], [3, 4]]),
+                hourly_forced_outage_rate=(
+                    ["energy_unit", "time"],
+                    [[0.1, 0.2], [0.3, 0.4]],
+                ),
             ),
             coords=dict(
                 energy_unit=[1, 2],
-                time=xr.date_range(
-                    start="2016-01-01 00:00",
-                    periods=2,
-                    freq="H"
-                )
-            )
+                time=xr.date_range(start="2016-01-01 00:00", periods=2, freq="H"),
+            ),
         )
 
         # test
@@ -178,7 +172,7 @@ class TestCore(unittest.TestCase):
         expected = unit_dataset
         observed = StochasticUnit.to_unit_dataset(units)
         self.assertTrue(observed.equals(expected))
-       
+
     def test_stochastic_unit_probabilistic_capacity_for_0(self):
         """Stochastic unit with FOR of 0 has full capacity"""
         from assetra.core import StochasticUnit
@@ -188,7 +182,7 @@ class TestCore(unittest.TestCase):
             id=1,
             nameplate_capacity=1,
             hourly_capacity=get_sample_time_series([1, 1]),
-            hourly_forced_outage_rate=get_sample_time_series([0, 0])
+            hourly_forced_outage_rate=get_sample_time_series([0, 0]),
         )
         unit_dataset = StochasticUnit.to_unit_dataset([unit])
 
@@ -196,8 +190,10 @@ class TestCore(unittest.TestCase):
         net_capacity_matrix = get_sample_net_capacity_matrix([[0, 0]])
 
         # test
-        expected=net_capacity_matrix.copy(data=[[1, 1]])
-        observed=StochasticUnit.get_probabilistic_capacity_matrix(unit_dataset, net_capacity_matrix)
+        expected = net_capacity_matrix.copy(data=[[1, 1]])
+        observed = StochasticUnit.get_probabilistic_capacity_matrix(
+            unit_dataset, net_capacity_matrix
+        )
         self.assertTrue(expected.equals(observed))
 
     def test_stochastic_unit_probabilistic_capacity_for_1(self):
@@ -209,7 +205,7 @@ class TestCore(unittest.TestCase):
             id=1,
             nameplate_capacity=1,
             hourly_capacity=get_sample_time_series([1, 1]),
-            hourly_forced_outage_rate=get_sample_time_series([1, 1])
+            hourly_forced_outage_rate=get_sample_time_series([1, 1]),
         )
         unit_dataset = StochasticUnit.to_unit_dataset([unit])
 
@@ -217,8 +213,10 @@ class TestCore(unittest.TestCase):
         net_capacity_matrix = get_sample_net_capacity_matrix([[0, 0]])
 
         # test
-        expected=net_capacity_matrix.copy(data=[[0, 0]])
-        observed=StochasticUnit.get_probabilistic_capacity_matrix(unit_dataset, net_capacity_matrix)
+        expected = net_capacity_matrix.copy(data=[[0, 0]])
+        observed = StochasticUnit.get_probabilistic_capacity_matrix(
+            unit_dataset, net_capacity_matrix
+        )
         self.assertTrue(expected.equals(observed))
 
     def test_stochastic_unit_probabilistic_capacity_for_tv(self):
@@ -230,7 +228,7 @@ class TestCore(unittest.TestCase):
             id=1,
             nameplate_capacity=1,
             hourly_capacity=get_sample_time_series([1, 1]),
-            hourly_forced_outage_rate=get_sample_time_series([0, 1])
+            hourly_forced_outage_rate=get_sample_time_series([0, 1]),
         )
         unit_dataset = StochasticUnit.to_unit_dataset([unit])
 
@@ -238,8 +236,10 @@ class TestCore(unittest.TestCase):
         net_capacity_matrix = get_sample_net_capacity_matrix([[0, 0]])
 
         # test
-        expected=net_capacity_matrix.copy(data=[[1, 0]])
-        observed=StochasticUnit.get_probabilistic_capacity_matrix(unit_dataset, net_capacity_matrix)
+        expected = net_capacity_matrix.copy(data=[[1, 0]])
+        observed = StochasticUnit.get_probabilistic_capacity_matrix(
+            unit_dataset, net_capacity_matrix
+        )
         self.assertTrue(expected.equals(observed))
 
     def test_storage_unit_list_to_dataset(self):
@@ -247,35 +247,37 @@ class TestCore(unittest.TestCase):
         from assetra.core import StorageUnit
 
         units = []
-        units.append(StorageUnit(
-            id=1,
-            nameplate_capacity=1,
-            charge_rate=1,
-            discharge_rate=2,
-            charge_capacity=3,
-            roundtrip_efficiency=0.8
-        ))
-        units.append(StorageUnit(
-            id=2,
-            nameplate_capacity=2,
-            charge_rate=4,
-            discharge_rate=5,
-            charge_capacity=6,
-            roundtrip_efficiency=0.9
-        ))
+        units.append(
+            StorageUnit(
+                id=1,
+                nameplate_capacity=1,
+                charge_rate=1,
+                discharge_rate=2,
+                charge_capacity=3,
+                roundtrip_efficiency=0.8,
+            )
+        )
+        units.append(
+            StorageUnit(
+                id=2,
+                nameplate_capacity=2,
+                charge_rate=4,
+                discharge_rate=5,
+                charge_capacity=6,
+                roundtrip_efficiency=0.9,
+            )
+        )
 
         # test
         expected = xr.Dataset(
             data_vars=dict(
-                nameplate_capacity=(['energy_unit'], [1, 2]),
-                charge_rate=(['energy_unit'], [1, 4]),
-                discharge_rate=(['energy_unit'], [2, 5]),
-                charge_capacity=(['energy_unit'], [3, 6]),
-                roundtrip_efficiency=(['energy_unit'], [0.8, 0.9])
+                nameplate_capacity=(["energy_unit"], [1, 2]),
+                charge_rate=(["energy_unit"], [1, 4]),
+                discharge_rate=(["energy_unit"], [2, 5]),
+                charge_capacity=(["energy_unit"], [3, 6]),
+                roundtrip_efficiency=(["energy_unit"], [0.8, 0.9]),
             ),
-            coords=dict(
-                energy_unit=[1, 2]
-            )
+            coords=dict(energy_unit=[1, 2]),
         )
         observed = StorageUnit.to_unit_dataset(units)
         self.assertTrue(observed.equals(expected))
@@ -287,15 +289,13 @@ class TestCore(unittest.TestCase):
         # setup
         unit_dataset = xr.Dataset(
             data_vars=dict(
-                nameplate_capacity=(['energy_unit'], [1, 2]),
-                charge_rate=(['energy_unit'], [1, 4]),
-                discharge_rate=(['energy_unit'], [2, 5]),
-                charge_capacity=(['energy_unit'], [3, 6]),
-                roundtrip_efficiency=(['energy_unit'], [0.8, 0.9])
+                nameplate_capacity=(["energy_unit"], [1, 2]),
+                charge_rate=(["energy_unit"], [1, 4]),
+                discharge_rate=(["energy_unit"], [2, 5]),
+                charge_capacity=(["energy_unit"], [3, 6]),
+                roundtrip_efficiency=(["energy_unit"], [0.8, 0.9]),
             ),
-            coords=dict(
-                energy_unit=[1, 2]
-            )
+            coords=dict(energy_unit=[1, 2]),
         )
 
         # test
@@ -303,7 +303,7 @@ class TestCore(unittest.TestCase):
         expected = unit_dataset
         observed = StorageUnit.to_unit_dataset(units)
         self.assertTrue(observed.equals(expected))
-      
+
     def test_storage_unit_probabilistic_capacity_discharge_1(self):
         """Storage unit should not discharge more than its current capacity."""
         from assetra.core import StorageUnit
@@ -324,7 +324,9 @@ class TestCore(unittest.TestCase):
 
         # test
         expected = net_capacity_matrix.copy(data=[[1, 0, 0, 0]])
-        observed = StorageUnit.get_probabilistic_capacity_matrix(unit_dataset, net_capacity_matrix)
+        observed = StorageUnit.get_probabilistic_capacity_matrix(
+            unit_dataset, net_capacity_matrix
+        )
         self.assertTrue(expected.equals(observed))
 
     def test_storage_unit_probabilistic_capacity_discharge_2(self):
@@ -347,7 +349,9 @@ class TestCore(unittest.TestCase):
 
         # test
         expected = net_capacity_matrix.copy(data=[[1, 1, 1, 0]])
-        observed = StorageUnit.get_probabilistic_capacity_matrix(unit_dataset, net_capacity_matrix)
+        observed = StorageUnit.get_probabilistic_capacity_matrix(
+            unit_dataset, net_capacity_matrix
+        )
         self.assertTrue(expected.equals(observed))
 
     def test_storage_unit_probabilistic_capacity_charge(self):
@@ -370,7 +374,9 @@ class TestCore(unittest.TestCase):
 
         # test
         expected = net_capacity_matrix.copy(data=[[1, -1, 0, 0]])
-        observed = StorageUnit.get_probabilistic_capacity_matrix(unit_dataset, net_capacity_matrix)
+        observed = StorageUnit.get_probabilistic_capacity_matrix(
+            unit_dataset, net_capacity_matrix
+        )
         self.assertTrue(expected.equals(observed))
 
     def test_storage_unit_probabilistic_capacity_efficiency(self):
@@ -384,7 +390,7 @@ class TestCore(unittest.TestCase):
             charge_rate=1,
             discharge_rate=4,
             charge_capacity=4,
-            roundtrip_efficiency=0.25
+            roundtrip_efficiency=0.25,
         )
         unit_dataset = StorageUnit.to_unit_dataset([unit])
 
@@ -393,7 +399,9 @@ class TestCore(unittest.TestCase):
 
         # test
         expected = net_capacity_matrix.copy(data=[[1, -1, -1, -1, -1, 0]])
-        observed = StorageUnit.get_probabilistic_capacity_matrix(unit_dataset, net_capacity_matrix)
+        observed = StorageUnit.get_probabilistic_capacity_matrix(
+            unit_dataset, net_capacity_matrix
+        )
         self.assertTrue(expected.equals(observed))
 
     def test_system_builder_add_unit(self):
@@ -404,9 +412,9 @@ class TestCore(unittest.TestCase):
         u = StaticUnit(
             id=1,
             nameplate_capacity=1,
-            hourly_capacity=get_sample_time_series([0, 0, 0])
+            hourly_capacity=get_sample_time_series([0, 0, 0]),
         )
-        
+
         # sub-test 1
         self.assertEqual(b.size, 0)
 
@@ -426,7 +434,7 @@ class TestCore(unittest.TestCase):
         u = StaticUnit(
             id=1,
             nameplate_capacity=1,
-            hourly_capacity=get_sample_time_series([0, 0, 0])
+            hourly_capacity=get_sample_time_series([0, 0, 0]),
         )
 
         # test
@@ -439,30 +447,31 @@ class TestCore(unittest.TestCase):
 
         class InvalidUnit(StaticUnit):
             pass
-            
+
         b = EnergySystemBuilder()
         u = InvalidUnit(
             id=1,
             nameplate_capacity=1,
-            hourly_capacity=get_sample_time_series([0, 0, 0])
+            hourly_capacity=get_sample_time_series([0, 0, 0]),
         )
 
         # test
         self.assertRaises(RuntimeError, b.add_unit, u)
-    
+
     def test_system_builder_build_single(self):
         """System builder should create all unit datasets."""
         from assetra.core import StaticUnit, EnergySystemBuilder
+
         b = EnergySystemBuilder()
         u = StaticUnit(
             id=1,
             nameplate_capacity=1,
-            hourly_capacity=get_sample_time_series([0, 0, 0])
+            hourly_capacity=get_sample_time_series([0, 0, 0]),
         )
         b.add_unit(u)
 
         e = b.build()
-        
+
         # sub-test 1
         expected = [StaticUnit]
         observed = list(e.unit_datasets)
@@ -475,7 +484,13 @@ class TestCore(unittest.TestCase):
 
     def test_system_builder_build_full(self):
         """System should store unit datasets in order of dispatch."""
-        from assetra.core import StaticUnit, StochasticUnit, StorageUnit, EnergySystemBuilder
+        from assetra.core import (
+            StaticUnit,
+            StochasticUnit,
+            StorageUnit,
+            EnergySystemBuilder,
+        )
+
         b = EnergySystemBuilder()
         u1 = StorageUnit(
             id=1,
@@ -483,26 +498,26 @@ class TestCore(unittest.TestCase):
             charge_rate=1,
             discharge_rate=1,
             charge_capacity=1,
-            roundtrip_efficiency=0.8
+            roundtrip_efficiency=0.8,
         )
         u2 = StochasticUnit(
             id=2,
             nameplate_capacity=2,
             hourly_capacity=get_sample_time_series([0, 0, 0]),
-            hourly_forced_outage_rate=get_sample_time_series([.05, .05, .05])
+            hourly_forced_outage_rate=get_sample_time_series([0.05, 0.05, 0.05]),
         )
 
         u3 = StaticUnit(
             id=3,
             nameplate_capacity=3,
-            hourly_capacity=get_sample_time_series([0, 0, 0])
+            hourly_capacity=get_sample_time_series([0, 0, 0]),
         )
         b.add_unit(u1)
         b.add_unit(u2)
         b.add_unit(u3)
 
         e = b.build()
-        
+
         # sub-test 1
         expected = [StaticUnit, StochasticUnit, StorageUnit]
         observed = list(e.unit_datasets)
@@ -511,11 +526,12 @@ class TestCore(unittest.TestCase):
     def test_system_builder_from_system(self):
         """System builder should be recoverable from system"""
         from assetra.core import StaticUnit, EnergySystemBuilder
+
         b = EnergySystemBuilder()
         u1 = StaticUnit(
             id=1,
             nameplate_capacity=1,
-            hourly_capacity=get_sample_time_series([1, 1, 1])
+            hourly_capacity=get_sample_time_series([1, 1, 1]),
         )
         b.add_unit(u1)
         e = b.build()
@@ -528,23 +544,33 @@ class TestCore(unittest.TestCase):
 
     def test_system_save_load(self):
         """System should be recoverable from file system."""
-        from assetra.core import StaticUnit, StochasticUnit, EnergySystemBuilder, EnergySystem
+        from assetra.core import (
+            StaticUnit,
+            StochasticUnit,
+            EnergySystemBuilder,
+            EnergySystem,
+        )
+
         # setup directory
-        save_dir = pathlib.Path('tmp-sys') 
+        save_dir = pathlib.Path("tmp-sys")
         save_dir.mkdir()
         try:
             b = EnergySystemBuilder()
-            b.add_unit(StaticUnit(
-                id=1,
-                nameplate_capacity=1,
-                hourly_capacity=get_sample_time_series([1, 1, 1])
-            ))
-            b.add_unit(StochasticUnit(
-                id=2,
-                nameplate_capacity=2,
-                hourly_capacity=get_sample_time_series([1, 1, 1]),
-                hourly_forced_outage_rate=get_sample_time_series([0.8, 0.8, 0.8])
-            ))
+            b.add_unit(
+                StaticUnit(
+                    id=1,
+                    nameplate_capacity=1,
+                    hourly_capacity=get_sample_time_series([1, 1, 1]),
+                )
+            )
+            b.add_unit(
+                StochasticUnit(
+                    id=2,
+                    nameplate_capacity=2,
+                    hourly_capacity=get_sample_time_series([1, 1, 1]),
+                    hourly_forced_outage_rate=get_sample_time_series([0.8, 0.8, 0.8]),
+                )
+            )
             b
             e = b.build()
 
@@ -569,7 +595,7 @@ class TestCore(unittest.TestCase):
             # delete dir
             save_dir.rmdir()
 
-"""
+
 class TestProbabilisticAnalysis(unittest.TestCase):
     def test_probabilistic_simulation_1(self):
         """Probabilistic simulation should generate hourly capacity matrix."""
@@ -816,7 +842,7 @@ class TestResourceContribution(unittest.TestCase):
         expected = 1.0
         observed = rc.evaluate()
         self.assertEqual(expected, observed)
-"""
+
 
 if __name__ == "__main__":
     unittest.main()
