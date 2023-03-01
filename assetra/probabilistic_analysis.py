@@ -7,7 +7,6 @@ from assetra.core import EnergySystem
 import numpy as np
 import xarray as xr
 
-
 class ProbabilisticSimulation:
     """Class responsible for creating/storing the Monte Carlo
     trials for EnergySystem objects."""
@@ -26,7 +25,6 @@ class ProbabilisticSimulation:
        
     def run(self):
         # TODO add loading point for pre-computed fleet capacities
-
         # setup net hourly capacity matrix
         time_stamps = xr.date_range(
             self.start_hour, self.end_hour, freq="H", inclusive="both"
