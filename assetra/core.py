@@ -262,7 +262,7 @@ VALID_UNIT_TYPES = [StaticUnit, StochasticUnit, StorageUnit]
 
 class EnergySystem:
     '''Class responsible for managing energy unit datasets'''
-    def __init__(self, energy_units: List[EnergyUnit]=None):
+    def __init__(self, energy_units: List[EnergyUnit]=[]):
         self.unit_datasets = dict()
         
         # populate unit datasets
@@ -283,12 +283,15 @@ class EnergySystem:
         self.unit_datasets = dict()
 
         for dataset_file in Path(directory).glob('*.assetra.nc'):
-            # get unit type str (should be file prefix)
+            # get unit type str (file prefix)
             unit_type_str = dataset_file.name.split('.')[0]
 
             # convert unit type str to valid unit type
-            unit_type = VALID_UNIT_TYPES[[VALID_UNIT_TYPES.__name__].find(unit_type_str)]
-            self.unit_datests[unit_type] = xr.open_dataset(dataset_file)
+            unit_type_idx =  [u.__name__ for u in VALID_UNIT_TYPES].index(unit_type_str)
+            if unit_type_idx == -1:
+                raise RuntimeError("Invalid unit dataset found in directory.")
+            unit_type = VALID_UNIT_TYPES[unit_type_idx]
+            self.unit_datasets[unit_type] = xr.open_dataset(dataset_file)
     
 class EnergySystemBuilder:
     """Class responsible for managing energy units."""
@@ -296,6 +299,14 @@ class EnergySystemBuilder:
 
     def __init__(self):
         self._energy_units = []
+
+    @property
+    def energy_units(self):
+        return tuple(self._energy_units)
+    
+    @property
+    def size(self):
+        return len(self._energy_units)
 
     def add_unit(self, energy_unit: EnergyUnit):
         # check for valid energy unit

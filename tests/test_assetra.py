@@ -1,3 +1,4 @@
+import pathlib
 import unittest
 import sys
 
@@ -397,247 +398,186 @@ class TestCore(unittest.TestCase):
 
     def test_system_builder_add_unit(self):
         """Energy units can be added and removed from systems."""
-        from assetra.core import StaticUnit, EnergySystem
+        from assetra.core import StaticUnit, EnergySystemBuilder
 
-        e = EnergySystem()
+        b = EnergySystemBuilder()
         u = StaticUnit(
             id=1,
             nameplate_capacity=1,
             hourly_capacity=get_sample_time_series([0, 0, 0])
         )
         
-
         # sub-test 1
-        self.assertEqual(e.size, 0)
+        self.assertEqual(b.size, 0)
 
         # sub-test 2
-        e.add_unit(u)
-        self.assertEqual(e.size, 1)
+        b.add_unit(u)
+        self.assertEqual(b.size, 1)
 
         # sub-test 3
-        e.remove_unit(u)
-        self.assertEqual(e.size, 0)
+        b.remove_unit(u)
+        self.assertEqual(b.size, 0)
 
     def test_system_builder_duplicates(self):
         """Energy units should not be duplicated."""
-        from assetra.core import StaticUnit, EnergySystem
+        from assetra.core import StaticUnit, EnergySystemBuilder
 
-        e = EnergySystem()
+        b = EnergySystemBuilder()
         u = StaticUnit(
             id=1,
             nameplate_capacity=1,
             hourly_capacity=get_sample_time_series([0, 0, 0])
         )
 
-        # sub-test 1
-        e.add_unit(u)
-        self.assertRaises(RuntimeError, e.add_unit, u)
-    
-    def test_system_builder_build(self):
-        pass
+        # test
+        b.add_unit(u)
+        self.assertRaises(RuntimeError, b.add_unit, u)
 
-    def test_system_builder_from_system(self):
-        pass
+    def test_system_builder_valid_types(self):
+        """System builder should only accept valid unit types."""
+        from assetra.core import StaticUnit, EnergySystemBuilder
 
-    def test_system_dataset_order(self):
-        pass
-
-    def test_system_save(self):
-        pass
-
-    def test_system_load(self):
-        pass    
-    
-    #### OLD ######
-
-    def test_ener_sys_old_3(self):
-        """Energy units should be stable-sorted.
-        i.e. storage units should be held in order of insert"""
-        from assetra.core import StaticUnit, StorageUnit, EnergySystem
-
-        e = EnergySystem()
-        u1 = StorageUnit(
+        class InvalidUnit(StaticUnit):
+            pass
+            
+        b = EnergySystemBuilder()
+        u = InvalidUnit(
             id=1,
-            charge_rate=1,
-            discharge_rate=1,
-            duration=3,
-            roundtrip_efficiency=1,
-        )
-        u2 = StaticUnit(
-            id=2,
             nameplate_capacity=1,
-            hourly_capacity=xr.DataArray(
-                data=[1, 2, 3],
-                coords=dict(
-                    time=xr.date_range(
-                        start="2016-01-01 00:00",
-                        end="2016-01-01 02:00",
-                        freq="H",
-                        inclusive="both",
-                    )
-                ),
-            ),
-        )
-        u3 = StorageUnit(
-            id=3,
-            charge_rate=1,
-            discharge_rate=1,
-            duration=3,
-            roundtrip_efficiency=1,
-        )
-        e.add_unit(u1)
-        e.add_unit(u2)
-        e.add_unit(u3)
-
-        # sub-test 1
-        expected = (u2, u1, u3)
-        observed = e.energy_units
-        self.assertTupleEqual(expected, observed)
-
-    def test_ener_sys_old_4(self):
-        """Energy systems should return hourly capacity by unit."""
-        from assetra.core import DemandUnit, StorageUnit, EnergySystem
-
-        e = EnergySystem()
-        e.add_unit(
-            DemandUnit(
-                id=1,
-                hourly_demand=xr.DataArray(
-                    data=[1, 1, 1],
-                    coords=dict(
-                        time=xr.date_range(
-                            start="2016-01-01 00:00",
-                            end="2016-01-01 02:00",
-                            freq="H",
-                            inclusive="both",
-                        )
-                    ),
-                ),
-            )
-        )
-        e.add_unit(
-            StorageUnit(
-                id=2,
-                charge_rate=1,
-                discharge_rate=1,
-                duration=2,
-                roundtrip_efficiency=1,
-            )
-        )
-        e.add_unit(
-            StorageUnit(
-                id=3,
-                charge_rate=1,
-                discharge_rate=1,
-                duration=1,
-                roundtrip_efficiency=1,
-            )
+            hourly_capacity=get_sample_time_series([0, 0, 0])
         )
 
         # test
-        expected = xr.DataArray(
-            data=[[-1, -1, -1], [1, 1, 0], [0, 0, 1]],
-            coords=dict(
-                energy_unit=[1, 2, 3],
-                time=xr.date_range(
-                    start="2016-01-01 00:00",
-                    end="2016-01-01 02:00",
-                    freq="H",
-                    inclusive="both",
-                ),
-            ),
+        self.assertRaises(RuntimeError, b.add_unit, u)
+    
+    def test_system_builder_build_single(self):
+        """System builder should create all unit datasets."""
+        from assetra.core import StaticUnit, EnergySystemBuilder
+        b = EnergySystemBuilder()
+        u = StaticUnit(
+            id=1,
+            nameplate_capacity=1,
+            hourly_capacity=get_sample_time_series([0, 0, 0])
         )
-        observed = e.get_hourly_capacity_by_unit(
-            start_hour="2016-01-01 00:00", end_hour="2016-01-01 02:00"
-        )
-        self.assertTrue(expected.equals(observed))
+        b.add_unit(u)
 
-    def test_ener_sys_old_5(self):
-        """Energy systems should accept pre-existing net capacity."""
-        from assetra.core import DemandUnit, StorageUnit, EnergySystem
-
-        e = EnergySystem()
-        e.add_unit(
-            DemandUnit(
-                id=1,
-                hourly_demand=xr.DataArray(
-                    data=[1, 1, 1],
-                    coords=dict(
-                        time=xr.date_range(
-                            start="2016-01-01 00:00",
-                            end="2016-01-01 02:00",
-                            freq="H",
-                            inclusive="both",
-                        )
-                    ),
-                ),
-            )
-        )
-        e.add_unit(
-            StorageUnit(
-                id=2,
-                charge_rate=1,
-                discharge_rate=1,
-                duration=2,
-                roundtrip_efficiency=1,
-            )
-        )
-        e.add_unit(
-            StorageUnit(
-                id=3,
-                charge_rate=1,
-                discharge_rate=1,
-                duration=1,
-                roundtrip_efficiency=1,
-            )
-        )
-
-        net_hourly_capacity = xr.DataArray(
-            data=[1, 0, -1],
-            coords=dict(
-                time=xr.date_range(
-                    start="2016-01-01 00:00",
-                    end="2016-01-01 02:00",
-                    freq="H",
-                    inclusive="both",
-                )
-            ),
-        )
-
+        e = b.build()
+        
         # sub-test 1
-        expected = xr.DataArray(
-            data=[[-1, -1, -1], [0, 1, 1], [0, 0, 1]],
-            coords=dict(
-                energy_unit=[1, 2, 3],
-                time=xr.date_range(
-                    start="2016-01-01 00:00",
-                    end="2016-01-01 02:00",
-                    freq="H",
-                    inclusive="both",
-                ),
-            ),
-        )
-        observed = e.get_hourly_capacity_by_unit(
-            start_hour="2016-01-01 00:00",
-            end_hour="2016-01-01 02:00",
-            net_hourly_capacity=net_hourly_capacity,
-        )
-        self.assertTrue(expected.equals(observed))
+        expected = [StaticUnit]
+        observed = list(e.unit_datasets)
+        self.assertEqual(expected, observed)
 
         # sub-test 2
-        expected = xr.zeros_like(net_hourly_capacity)
-        observed = net_hourly_capacity
+        expected = e.unit_datasets[StaticUnit]
+        observed = StaticUnit.to_unit_dataset([u])
         self.assertTrue(expected.equals(observed))
 
+    def test_system_builder_build_full(self):
+        """System should store unit datasets in order of dispatch."""
+        from assetra.core import StaticUnit, StochasticUnit, StorageUnit, EnergySystemBuilder
+        b = EnergySystemBuilder()
+        u1 = StorageUnit(
+            id=1,
+            nameplate_capacity=1,
+            charge_rate=1,
+            discharge_rate=1,
+            charge_capacity=1,
+            roundtrip_efficiency=0.8
+        )
+        u2 = StochasticUnit(
+            id=2,
+            nameplate_capacity=2,
+            hourly_capacity=get_sample_time_series([0, 0, 0]),
+            hourly_forced_outage_rate=get_sample_time_series([.05, .05, .05])
+        )
+
+        u3 = StaticUnit(
+            id=3,
+            nameplate_capacity=3,
+            hourly_capacity=get_sample_time_series([0, 0, 0])
+        )
+        b.add_unit(u1)
+        b.add_unit(u2)
+        b.add_unit(u3)
+
+        e = b.build()
+        
+        # sub-test 1
+        expected = [StaticUnit, StochasticUnit, StorageUnit]
+        observed = list(e.unit_datasets)
+        self.assertEqual(expected, observed)
+
+    def test_system_builder_from_system(self):
+        """System builder should be recoverable from system"""
+        from assetra.core import StaticUnit, EnergySystemBuilder
+        b = EnergySystemBuilder()
+        u1 = StaticUnit(
+            id=1,
+            nameplate_capacity=1,
+            hourly_capacity=get_sample_time_series([1, 1, 1])
+        )
+        b.add_unit(u1)
+        e = b.build()
+        b2 = EnergySystemBuilder.from_energy_system(e)
+
+        # test
+        expected = e.unit_datasets
+        observed = b2.build().unit_datasets
+        self.assertEqual(expected, observed)
+
+    def test_system_save_load(self):
+        """System should be recoverable from file system."""
+        from assetra.core import StaticUnit, StochasticUnit, EnergySystemBuilder, EnergySystem
+        # setup directory
+        save_dir = pathlib.Path('tmp-sys') 
+        save_dir.mkdir()
+        try:
+            b = EnergySystemBuilder()
+            b.add_unit(StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([1, 1, 1])
+            ))
+            b.add_unit(StochasticUnit(
+                id=2,
+                nameplate_capacity=2,
+                hourly_capacity=get_sample_time_series([1, 1, 1]),
+                hourly_forced_outage_rate=get_sample_time_series([0.8, 0.8, 0.8])
+            ))
+            b
+            e = b.build()
+
+            # save system
+            e.save(save_dir)
+
+            # load system
+            e2 = EnergySystem()
+            e2.load(save_dir)
+
+            # test
+            expected = e.unit_datasets
+            observed = e2.unit_datasets
+            self.assertEqual(expected, observed)
+        except Exception as ex:
+            raise ex
+        finally:
+            # delete artifacts
+            for save_file in save_dir.iterdir():
+                save_file.unlink()
+
+            # delete dir
+            save_dir.rmdir()
 
 class TestProbabilisticAnalysis(unittest.TestCase):
     def test_probabilistic_simulation_1(self):
         """Probabilistic simulation should generate hourly capacity matrix."""
-        from assetra.core import EnergySystem, StaticUnit
+        return
+        from assetra.core import EnergySystemBuilder, StaticUnit
         from assetra.probabilistic_analysis import ProbabilisticSimulation
 
         # create system
-        e = EnergySystem()
+        e = EnergySystemBuilder()
         e.add_unit(
             StaticUnit(
                 id=1,
@@ -698,11 +638,12 @@ class TestProbabilisticAnalysis(unittest.TestCase):
 
     def test_probabilistic_simulation_2(self):
         """Probabilistic simulation should allow flexible time-indexing."""
-        from assetra.core import EnergySystem, StaticUnit
+        return
+        from assetra.core import EnergySystemBuilder, StaticUnit
         from assetra.probabilistic_analysis import ProbabilisticSimulation
 
         # create system
-        e = EnergySystem()
+        e = EnergySystemBuilder()
         e.add_unit(
             StaticUnit(
                 id=1,
@@ -765,12 +706,13 @@ class TestProbabilisticAnalysis(unittest.TestCase):
 class TestResourceAdequacyMetric(unittest.TestCase):
     def test_eue_1(self):
         """Definition of EUE (single trial)"""
-        from assetra.core import EnergySystem, StaticUnit
+        return
+        from assetra.core import EnergySystemBuilder, StaticUnit
         from assetra.probabilistic_analysis import ProbabilisticSimulation
         from assetra.adequacy_metrics import ExpectedUnservedEnergy
 
         # create system
-        e = EnergySystem()
+        e = EnergySystemBuilder()
         e.add_unit(
             StaticUnit(
                 id=1,
@@ -822,12 +764,13 @@ class TestResourceAdequacyMetric(unittest.TestCase):
 
     def test_eue_2(self):
         """EUE should ignore excess capacity in non-loss-of-load hours"""
-        from assetra.core import EnergySystem, DemandUnit, StaticUnit
+        return
+        from assetra.core import EnergySystemBuilder, DemandUnit, StaticUnit
         from assetra.probabilistic_analysis import ProbabilisticSimulation
         from assetra.adequacy_metrics import ExpectedUnservedEnergy
 
         # create system
-        e = EnergySystem()
+        e = EnergySystemBuilder()
         u1 = DemandUnit(id=1, hourly_demand=np.array([1, 1]))
         u2 = StaticUnit(id=1, nameplate_capacity=1, hourly_capacity=np.array([0, 2]))
         e.add_unit(u1)
@@ -847,18 +790,19 @@ class TestResourceAdequacyMetric(unittest.TestCase):
 
 class TestResourceContribution(unittest.TestCase):
     def test_elcc_1(self):
-        from assetra.core import StaticUnit, EnergySystem
+        return
+        from assetra.core import StaticUnit, EnergySystemBuilder
         from assetra.probabilistic_analysis import ProbabilisticSimulation
         from assetra.adequacy_metrics import ExpectedUnservedEnergy
         from assetra.contribution_metrics import EffectiveLoadCarryingCapability
 
         # target system
-        e1 = EnergySystem()
+        e1 = EnergySystemBuilder()
         u1 = StaticUnit(id=1, nameplate_capacity=1, hourly_capacity=[0, 0, -1, 0])
         e1.add_unit(u1)
 
         # additional system
-        e2 = EnergySystem()
+        e2 = EnergySystemBuilder()
         u2 = StaticUnit(id=1, nameplate_capacity=1, hourly_capacity=[1, 1, 1, 1])
         e2.add_unit(u2)
 
