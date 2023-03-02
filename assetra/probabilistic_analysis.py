@@ -13,12 +13,7 @@ class ProbabilisticSimulation:
     """Class responsible for creating/storing the Monte Carlo
     trials for EnergySystem objects."""
 
-    def __init__(
-        self,
-        start_hour: datetime,
-        end_hour: datetime,
-        trial_size: int
-    ):
+    def __init__(self, start_hour: datetime, end_hour: datetime, trial_size: int):
         self._start_hour = start_hour
         self._end_hour = end_hour
         self._trial_size = trial_size
@@ -46,8 +41,10 @@ class ProbabilisticSimulation:
 
     def run(self):
         if not isinstance(self._energy_system, EnergySystem):
-            raise RuntimeError('Energy system not assigned to probabilistic simulation object.')
-        
+            raise RuntimeError(
+                "Energy system not assigned to probabilistic simulation object."
+            )
+
         # TODO add loading point for pre-computed fleet capacities
         # setup net hourly capacity matrix
         time_stamps = xr.date_range(
@@ -83,31 +80,35 @@ class ProbabilisticSimulation:
                 unit_type=unit_type
             ).values
 
+
 class ResourceAdequacyMetric(ABC):
     def __init__(self, simulation):
-        self.simulation=simulation
+        self.simulation = simulation
 
     @abstractmethod
     def evaluate(self):
         pass
 
+
 class ExpectedUnservedEnergy(ResourceAdequacyMetric):
     def evaluate(self):
         hourly_unserved_energy = self.simulation.net_hourly_capacity_matrix.where(
-            self.simulation.net_hourly_capacity_matrix < 0, 
-            0
+            self.simulation.net_hourly_capacity_matrix < 0, 0
         )
         return float(
             -hourly_unserved_energy.sum() / hourly_unserved_energy.sizes["trial"]
         )
 
-class TransmissionProbabilisticSimulation():
+
+class TransmissionProbabilisticSimulation:
     # TODO
     pass
 
-class TransmissionSystem():
+
+class TransmissionSystem:
     # TODO
     pass
+
 
 class EffectiveLoadCarryingCapability:
     # TODO

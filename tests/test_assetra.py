@@ -620,9 +620,7 @@ class TestProbabilisticAnalysis(unittest.TestCase):
 
         # create simulation
         ps = ProbabilisticSimulation(
-            start_hour="2016-01-01 0:00", 
-            end_hour="2016-01-01 02:00", 
-            trial_size=3
+            start_hour="2016-01-01 0:00", end_hour="2016-01-01 02:00", trial_size=3
         )
         ps.assign_energy_system(e)
 
@@ -658,9 +656,7 @@ class TestProbabilisticAnalysis(unittest.TestCase):
 
         # create simulation
         ps = ProbabilisticSimulation(
-            start_hour="2016-01-01 01:00", 
-            end_hour="2016-01-01 02:00", 
-            trial_size=4
+            start_hour="2016-01-01 01:00", end_hour="2016-01-01 02:00", trial_size=4
         )
         ps.assign_energy_system(e)
 
@@ -699,7 +695,7 @@ class TestProbabilisticAnalysis(unittest.TestCase):
                 charge_rate=1,
                 discharge_rate=1,
                 charge_capacity=1,
-                roundtrip_efficiency=1
+                roundtrip_efficiency=1,
             )
         )
         b.add_unit(
@@ -709,7 +705,7 @@ class TestProbabilisticAnalysis(unittest.TestCase):
                 charge_rate=1,
                 discharge_rate=1,
                 charge_capacity=1,
-                roundtrip_efficiency=1
+                roundtrip_efficiency=1,
             )
         )
 
@@ -718,9 +714,7 @@ class TestProbabilisticAnalysis(unittest.TestCase):
 
         # create simulation
         ps = ProbabilisticSimulation(
-            start_hour="2016-01-01 0:00", 
-            end_hour="2016-01-01 02:00", 
-            trial_size=1
+            start_hour="2016-01-01 0:00", end_hour="2016-01-01 02:00", trial_size=1
         )
         ps.assign_energy_system(e)
 
@@ -736,18 +730,22 @@ class TestProbabilisticAnalysis(unittest.TestCase):
             [[-2, 0, 1]],
         )
         observed = ps.get_hourly_capacity_matrix_by_type(StaticUnit)
-    
+
         # sub-test 2
         expected = get_sample_net_capacity_matrix(
             [[2, 0, -1]],
         )
         observed = ps.get_hourly_capacity_matrix_by_type(StorageUnit)
-    
+
+
 class TestResourceAdequacyMetric(unittest.TestCase):
     def test_eue_1(self):
         """Definition of EUE (single trial)"""
         from assetra.core import EnergySystemBuilder, StaticUnit
-        from assetra.probabilistic_analysis import ProbabilisticSimulation, ExpectedUnservedEnergy
+        from assetra.probabilistic_analysis import (
+            ProbabilisticSimulation,
+            ExpectedUnservedEnergy,
+        )
 
         # create system
         b = EnergySystemBuilder()
@@ -755,14 +753,14 @@ class TestResourceAdequacyMetric(unittest.TestCase):
             StaticUnit(
                 id=1,
                 nameplate_capacity=1,
-                hourly_capacity=get_sample_time_series([-1, -1])
+                hourly_capacity=get_sample_time_series([-1, -1]),
             )
         )
         b.add_unit(
             StaticUnit(
                 id=2,
                 nameplate_capacity=2,
-                hourly_capacity=get_sample_time_series([0, 1])
+                hourly_capacity=get_sample_time_series([0, 1]),
             )
         )
         e = b.build()
@@ -780,11 +778,14 @@ class TestResourceAdequacyMetric(unittest.TestCase):
         expected = 1
         observed = ra.evaluate()
         self.assertEqual(expected, observed)
-    
+
     def test_eue_2(self):
         """Definition of EUE (multi-trial)"""
         from assetra.core import EnergySystemBuilder, StaticUnit
-        from assetra.probabilistic_analysis import ProbabilisticSimulation, ExpectedUnservedEnergy
+        from assetra.probabilistic_analysis import (
+            ProbabilisticSimulation,
+            ExpectedUnservedEnergy,
+        )
 
         # create system
         b = EnergySystemBuilder()
@@ -792,14 +793,14 @@ class TestResourceAdequacyMetric(unittest.TestCase):
             StaticUnit(
                 id=1,
                 nameplate_capacity=1,
-                hourly_capacity=get_sample_time_series([-1, -1])
+                hourly_capacity=get_sample_time_series([-1, -1]),
             )
         )
         b.add_unit(
             StaticUnit(
                 id=2,
                 nameplate_capacity=2,
-                hourly_capacity=get_sample_time_series([0, 1])
+                hourly_capacity=get_sample_time_series([0, 1]),
             )
         )
         e = b.build()
@@ -821,7 +822,10 @@ class TestResourceAdequacyMetric(unittest.TestCase):
     def test_eue_3(self):
         """EUE should ignore excess capacity in non-loss-of-load hours"""
         from assetra.core import EnergySystemBuilder, StaticUnit
-        from assetra.probabilistic_analysis import ProbabilisticSimulation, ExpectedUnservedEnergy
+        from assetra.probabilistic_analysis import (
+            ProbabilisticSimulation,
+            ExpectedUnservedEnergy,
+        )
 
         # create system
         b = EnergySystemBuilder()
@@ -829,14 +833,14 @@ class TestResourceAdequacyMetric(unittest.TestCase):
             StaticUnit(
                 id=1,
                 nameplate_capacity=1,
-                hourly_capacity=get_sample_time_series([-1, -1])
+                hourly_capacity=get_sample_time_series([-1, -1]),
             )
         )
         b.add_unit(
             StaticUnit(
                 id=2,
                 nameplate_capacity=2,
-                hourly_capacity=get_sample_time_series([0, 2])
+                hourly_capacity=get_sample_time_series([0, 2]),
             )
         )
         e = b.build()
@@ -851,9 +855,10 @@ class TestResourceAdequacyMetric(unittest.TestCase):
         ra = ExpectedUnservedEnergy(ps)
 
         # test
-        expected = 0.5
+        expected = 1
         observed = ra.evaluate()
         self.assertEqual(expected, observed)
+
 
 class TestResourceContribution(unittest.TestCase):
     def test_elcc_1(self):
