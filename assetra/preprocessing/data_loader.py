@@ -1,4 +1,3 @@
-from datetime import datetime
 from pathlib import Path
 from logging import getLogger
 
@@ -116,7 +115,9 @@ class DataLoader:
         logger.info("Loading merra power generation data")
         # find file
         power_generation_file = Path(
-            self.data_directory, "merra", f"merra_power_genration_{self.year}.nc"
+            self.data_directory,
+            "merra",
+            f"merra_power_genration_{self.year}.nc",
         )
 
         # open file
@@ -361,7 +362,9 @@ class DataLoader:
         logger.info("Loading storage generator data from EIA-860 dataset")
         # find file
         eia_860_storage_file = Path(
-            self.data_directory, "eia860", f"3_4_Energy_Storage_Y{self.year}.xlsx"
+            self.data_directory,
+            "eia860",
+            f"3_4_Energy_Storage_Y{self.year}.xlsx",
         )
 
         # open file
