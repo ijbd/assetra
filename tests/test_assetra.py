@@ -620,11 +620,13 @@ class TestProbabilisticAnalysis(unittest.TestCase):
 
         # create simulation
         ps = ProbabilisticSimulation(
-            e, start_hour="2016-01-01 00:00", end_hour="2016-01-01 02:00", trial_size=3
+            start_hour="2016-01-01 0:00", 
+            end_hour="2016-01-01 02:00", 
+            trial_size=3
         )
+        ps.assign_energy_system(e)
 
         # test
-        ps.run()
         expected = get_sample_net_capacity_matrix([[3, 1, 2]] * 3)
         observed = ps.net_hourly_capacity_matrix
         self.assertTrue(expected.equals(observed))
@@ -656,102 +658,202 @@ class TestProbabilisticAnalysis(unittest.TestCase):
 
         # create simulation
         ps = ProbabilisticSimulation(
-            e, start_hour="2016-01-01 01:00", end_hour="2016-01-01 02:00", trial_size=4
+            start_hour="2016-01-01 01:00", 
+            end_hour="2016-01-01 02:00", 
+            trial_size=4
         )
+        ps.assign_energy_system(e)
 
         # test
-        ps.run()
         expected = get_sample_net_capacity_matrix(
             [[1, 2]] * 4, start="2016-01-01 01:00"
         )
         observed = ps.net_hourly_capacity_matrix
         self.assertTrue(expected.equals(observed))
 
-
-class TestResourceAdequacyMetric(unittest.TestCase):
-    def test_eue_1(self):
-        """Definition of EUE (single trial)"""
-        return
-        from assetra.core import EnergySystemBuilder, StaticUnit
+    def test_probabilistic_simulation_3(self):
+        """Probabilistic simulation should allow flexible time-indexing."""
+        from assetra.core import EnergySystemBuilder, StaticUnit, StorageUnit
         from assetra.probabilistic_analysis import ProbabilisticSimulation
-        from assetra.adequacy_metrics import ExpectedUnservedEnergy
 
         # create system
-        e = EnergySystemBuilder()
-        e.add_unit(
+        b = EnergySystemBuilder()
+        b.add_unit(
             StaticUnit(
                 id=1,
                 nameplate_capacity=1,
-                hourly_capacity=xr.DataArray(
-                    data=[-1, -1],
-                    coords=dict(
-                        time=xr.date_range(
-                            start="2016-01-01 00:00",
-                            end="2016-01-01 01:00",
-                            freq="H",
-                            inclusive="both",
-                        )
-                    ),
-                ),
+                hourly_capacity=get_sample_time_series([-2, -2, -2]),
             )
         )
-        e.add_unit(
+        b.add_unit(
             StaticUnit(
                 id=2,
                 nameplate_capacity=2,
-                hourly_capacity=xr.DataArray(
-                    data=[0, 1],
-                    coords=dict(
-                        time=xr.date_range(
-                            start="2016-01-01 00:00",
-                            end="2016-01-01 01:00",
-                            freq="H",
-                            inclusive="both",
-                        )
-                    ),
-                ),
+                hourly_capacity=get_sample_time_series([0, 2, 3]),
+            )
+        )
+        b.add_unit(
+            StorageUnit(
+                id=3,
+                nameplate_capacity=1,
+                charge_rate=1,
+                discharge_rate=1,
+                charge_capacity=1,
+                roundtrip_efficiency=1
+            )
+        )
+        b.add_unit(
+            StorageUnit(
+                id=4,
+                nameplate_capacity=1,
+                charge_rate=1,
+                discharge_rate=1,
+                charge_capacity=1,
+                roundtrip_efficiency=1
             )
         )
 
+        # build system
+        e = b.build()
+
         # create simulation
         ps = ProbabilisticSimulation(
-            e, start_hour="2016-01-01 00:00", end_hour="2016-01-01 01:00", trial_size=3
+            start_hour="2016-01-01 0:00", 
+            end_hour="2016-01-01 02:00", 
+            trial_size=1
         )
-        ps.run()
+        ps.assign_energy_system(e)
+
+        # sub-test 1
+        expected = get_sample_net_capacity_matrix(
+            [[0, 0, 0]],
+        )
+        observed = ps.net_hourly_capacity_matrix
+        self.assertTrue(expected.equals(observed))
+
+        # sub-test 2
+        expected = get_sample_net_capacity_matrix(
+            [[-2, 0, 1]],
+        )
+        observed = ps.get_hourly_capacity_matrix_by_type(StaticUnit)
+    
+        # sub-test 2
+        expected = get_sample_net_capacity_matrix(
+            [[2, 0, -1]],
+        )
+        observed = ps.get_hourly_capacity_matrix_by_type(StorageUnit)
+    
+class TestResourceAdequacyMetric(unittest.TestCase):
+    def test_eue_1(self):
+        """Definition of EUE (single trial)"""
+        from assetra.core import EnergySystemBuilder, StaticUnit
+        from assetra.probabilistic_analysis import ProbabilisticSimulation, ExpectedUnservedEnergy
+
+        # create system
+        b = EnergySystemBuilder()
+        b.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([-1, -1])
+            )
+        )
+        b.add_unit(
+            StaticUnit(
+                id=2,
+                nameplate_capacity=2,
+                hourly_capacity=get_sample_time_series([0, 1])
+            )
+        )
+        e = b.build()
+
+        # create simulation
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00", end_hour="2016-01-01 01:00", trial_size=1
+        )
+        ps.assign_energy_system(e)
 
         # create adequacy model
         ra = ExpectedUnservedEnergy(ps)
 
-        # sub-test 1
+        # test
+        expected = 1
+        observed = ra.evaluate()
+        self.assertEqual(expected, observed)
+    
+    def test_eue_2(self):
+        """Definition of EUE (multi-trial)"""
+        from assetra.core import EnergySystemBuilder, StaticUnit
+        from assetra.probabilistic_analysis import ProbabilisticSimulation, ExpectedUnservedEnergy
+
+        # create system
+        b = EnergySystemBuilder()
+        b.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([-1, -1])
+            )
+        )
+        b.add_unit(
+            StaticUnit(
+                id=2,
+                nameplate_capacity=2,
+                hourly_capacity=get_sample_time_series([0, 1])
+            )
+        )
+        e = b.build()
+
+        # create simulation
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00", end_hour="2016-01-01 01:00", trial_size=3
+        )
+        ps.assign_energy_system(e)
+
+        # create adequacy model
+        ra = ExpectedUnservedEnergy(ps)
+
+        # test
         expected = 1
         observed = ra.evaluate()
         self.assertEqual(expected, observed)
 
-    def test_eue_2(self):
+    def test_eue_3(self):
         """EUE should ignore excess capacity in non-loss-of-load hours"""
-        return
-        from assetra.core import EnergySystemBuilder, DemandUnit, StaticUnit
-        from assetra.probabilistic_analysis import ProbabilisticSimulation
-        from assetra.adequacy_metrics import ExpectedUnservedEnergy
+        from assetra.core import EnergySystemBuilder, StaticUnit
+        from assetra.probabilistic_analysis import ProbabilisticSimulation, ExpectedUnservedEnergy
 
         # create system
-        e = EnergySystemBuilder()
-        u1 = DemandUnit(id=1, hourly_demand=np.array([1, 1]))
-        u2 = StaticUnit(id=1, nameplate_capacity=1, hourly_capacity=np.array([0, 2]))
-        e.add_unit(u1)
-        e.add_unit(u2)
+        b = EnergySystemBuilder()
+        b.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([-1, -1])
+            )
+        )
+        b.add_unit(
+            StaticUnit(
+                id=2,
+                nameplate_capacity=2,
+                hourly_capacity=get_sample_time_series([0, 2])
+            )
+        )
+        e = b.build()
 
         # create simulation
-        ps = ProbabilisticSimulation(e, start_hour=0, end_hour=2, trial_size=1)
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00", end_hour="2016-01-01 01:00", trial_size=1
+        )
+        ps.assign_energy_system(e)
 
         # create adequacy model
         ra = ExpectedUnservedEnergy(ps)
 
-        # sub-test 1
+        # test
         expected = 0.5
         observed = ra.evaluate()
         self.assertEqual(expected, observed)
-
 
 class TestResourceContribution(unittest.TestCase):
     def test_elcc_1(self):

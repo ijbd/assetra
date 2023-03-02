@@ -1,4 +1,5 @@
 from datetime import datetime
+from abc import ABC, abstractmethod
 
 # package
 from assetra.core import EnergySystem
@@ -16,14 +17,14 @@ class ProbabilisticSimulation:
         self,
         start_hour: datetime,
         end_hour: datetime,
-        trial_size: int,
-        energy_system: EnergySystem=None
+        trial_size: int
     ):
         self._start_hour = start_hour
         self._end_hour = end_hour
         self._trial_size = trial_size
-        self._energy_system = energy_system
 
+        # state variables
+        self._energy_system = None
         self._net_hourly_capacity_matrix = None
         self._hourly_capacity_matrix = None
 
@@ -38,13 +39,15 @@ class ProbabilisticSimulation:
             self.run()
         return self._net_hourly_capacity_matrix
 
-    @property
-    def hourly_capacity_matrix_by_type(self):
+    def get_hourly_capacity_matrix_by_type(self, unit_type):
         if self._hourly_capacity_matrix is None:
             self.run()
-        return self._hourly_capacity_matrix
+        return self._hourly_capacity_matrix.sel(unit_type=unit_type)
 
     def run(self):
+        if not isinstance(self._energy_system, EnergySystem):
+            raise RuntimeError('Energy system not assigned to probabilistic simulation object.')
+        
         # TODO add loading point for pre-computed fleet capacities
         # setup net hourly capacity matrix
         time_stamps = xr.date_range(
@@ -80,31 +83,32 @@ class ProbabilisticSimulation:
                 unit_type=unit_type
             ).values
 
+class ResourceAdequacyMetric(ABC):
+    def __init__(self, simulation):
+        self.simulation=simulation
 
-def get_effective_unserved_energy(net_hourly_capacity_matrix):
-    hourly_unserved_energy = net_hourly_capacity_matrix.where(
-        net_hourly_capacity_matrix < 0, 
-        0
-    )
-    return float(
-        -hourly_unserved_energy.sum() / hourly_unserved_energy.sizes["trial"]
-    )
+    @abstractmethod
+    def evaluate(self):
+        pass
 
-def get_loss_of_load_hours(net_hourly_capacity_matrix):
-    pass
-
-def get_loss_of_load_days(net_hourly_capacity_matrix):
-    pass
+class ExpectedUnservedEnergy(ResourceAdequacyMetric):
+    def evaluate(self):
+        hourly_unserved_energy = self.simulation.net_hourly_capacity_matrix.where(
+            self.simulation.net_hourly_capacity_matrix < 0, 
+            0
+        )
+        return float(
+            -hourly_unserved_energy.sum() / hourly_unserved_energy.sizes["trial"]
+        )
 
 class TransmissionProbabilisticSimulation():
+    # TODO
     pass
 
 class TransmissionSystem():
+    # TODO
     pass
 
 class EffectiveLoadCarryingCapability:
-    def __init__(self, energy_system, transmission_system, probabilistic_simulation, resource_adequacy_metric):
-        pass
-
-    def evaluate(self, additional_system):
-        pass
+    # TODO
+    pass
