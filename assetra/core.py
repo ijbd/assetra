@@ -16,6 +16,7 @@ log = getLogger(__name__)
 
 @dataclass(frozen=True)
 class EnergyUnit(ABC):
+    # TODO add to documentation explaining how to make a new unit
     id: int
     nameplate_capacity: float
 
@@ -306,27 +307,33 @@ class StorageUnit(EnergyUnit):
         return net_adj_hourly_capacity_matrix - net_hourly_capacity_matrix
 
 
-VALID_UNIT_TYPES = [StaticUnit, StochasticUnit, StorageUnit]
+# TODO add decision tree in doc explaining this
+NONVOLATILE_UNIT_TYPES = [StaticUnit, StochasticUnit]
+VOLATILE_UNIT_TYPES = [StorageUnit]
 
 
 class EnergySystem:
     """Class responsible for managing energy unit datasets"""
 
-    def __init__(self, energy_units: List[EnergyUnit] = []):
-        self._unit_datasets = dict()
+    def __init__(self, unit_datasets: dict = {}):
+        self._unit_datasets = unit_datasets
 
-        # populate unit datasets
-        for unit_type in VALID_UNIT_TYPES:
-            # get unit by type
-            units = [unit for unit in energy_units if type(unit) is unit_type]
-
-            # get unit dataset
-            if len(units) > 0:
-                self._unit_datasets[unit_type] = unit_type.to_unit_dataset(units)
+    @property
+    def nameplate_capacity(self):
+        return sum(d["nameplate_capacity"].sum() for d in self._unit_datasets.values())
 
     @property
     def unit_datasets(self):
         return {k: v for k, v in self._unit_datasets.items()}
+
+    def get_system_by_type(self, unit_type):
+        if isinstance(unit_type, (list, tuple)):
+            unit_datasets = {
+                ut: ud for ut, ud in self._unit_datasets.items() if ut in unit_type
+            }
+            return EnergySystem(unit_datasets)
+        elif unit_type in VOLATILE_UNIT_TYPES + NONVOLATILE_UNIT_TYPES:
+            return EnergySystem({unit_type: self._unit_datasets[unit_type]})
 
     def save(self, directory):
         for unit_type, dataset in self._unit_datasets.items():
@@ -336,16 +343,11 @@ class EnergySystem:
     def load(self, directory):
         self._unit_datasets = dict()
 
-        for dataset_file in Path(directory).glob("*.assetra.nc"):
-            # get unit type str (file prefix)
-            unit_type_str = dataset_file.name.split(".")[0]
+        for unit_type in NONVOLATILE_UNIT_TYPES + VOLATILE_UNIT_TYPES:
+            dataset_file = Path(directory, unit_type.__name__ + ".assetra.nc")
 
-            # convert unit type str to valid unit type
-            unit_type_idx = [u.__name__ for u in VALID_UNIT_TYPES].index(unit_type_str)
-            if unit_type_idx == -1:
-                raise RuntimeError("Invalid unit dataset found in directory.")
-            unit_type = VALID_UNIT_TYPES[unit_type_idx]
-            self._unit_datasets[unit_type] = xr.open_dataset(dataset_file)
+            if dataset_file.exists():
+                self._unit_datasets[unit_type] = xr.open_dataset(dataset_file)
 
 
 class EnergySystemBuilder:
@@ -366,7 +368,7 @@ class EnergySystemBuilder:
 
     def add_unit(self, energy_unit: EnergyUnit):
         # check for valid energy unit
-        if type(energy_unit) not in VALID_UNIT_TYPES:
+        if type(energy_unit) not in NONVOLATILE_UNIT_TYPES + VOLATILE_UNIT_TYPES:
             raise RuntimeError("Invalid type added to energy system.")
 
         # check for duplicates
@@ -380,8 +382,18 @@ class EnergySystemBuilder:
         self._energy_units.remove(energy_unit)
 
     def build(self):
-        system = EnergySystem(self._energy_units)
-        return system
+        unit_datasets = dict()
+
+        # populate unit datasets
+        for unit_type in NONVOLATILE_UNIT_TYPES + VOLATILE_UNIT_TYPES:
+            # get unit by type
+            units = [unit for unit in self.energy_units if type(unit) is unit_type]
+
+            # get unit dataset
+            if len(units) > 0:
+                unit_datasets[unit_type] = unit_type.to_unit_dataset(units)
+
+        return EnergySystem(unit_datasets)
 
     @staticmethod
     def from_energy_system(energy_system: EnergySystem):
