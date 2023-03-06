@@ -1,2 +1,3 @@
-
+Modules
+-------
 .. autoclass :: EnergyUnit
