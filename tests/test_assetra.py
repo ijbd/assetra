@@ -591,6 +591,84 @@ class TestCore(unittest.TestCase):
             # delete dir
             save_dir.rmdir()
 
+    def test_system_nameplate_capacity(self):
+        """Energy system should return total nameplate capacity"""
+        from assetra.core import StaticUnit, StochasticUnit, EnergySystemBuilder
+
+        b = EnergySystemBuilder()
+        b.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([1, 1, 1]),
+            )
+        )
+        b.add_unit(
+            StochasticUnit(
+                id=2,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([1, 1, 1]),
+                hourly_forced_outage_rate=get_sample_time_series([1, 1, 1]),
+            )
+        )
+        e = b.build()
+
+        # test
+        expected = 2
+        observed = e.nameplate_capacity
+        self.assertEqual(expected, observed)
+
+    def test_system_get_system_by_type(self):
+        """Energy system should return total nameplate capacity"""
+        from assetra.core import (
+            EnergySystemBuilder,
+            StaticUnit,
+            StochasticUnit,
+            StorageUnit,
+            NONVOLATILE_UNIT_TYPES,
+        )
+
+        b = EnergySystemBuilder()
+        b.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([1, 1, 1]),
+            )
+        )
+        b.add_unit(
+            StochasticUnit(
+                id=2,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([1, 1, 1]),
+                hourly_forced_outage_rate=get_sample_time_series([1, 1, 1]),
+            )
+        )
+        b.add_unit(
+            StorageUnit(
+                id=3,
+                nameplate_capacity=1,
+                charge_rate=1,
+                discharge_rate=1,
+                charge_capacity=1,
+                roundtrip_efficiency=1,
+            )
+        )
+        e = b.build()
+
+        # sub-test 1
+        expected = {
+            StaticUnit: e.unit_datasets[StaticUnit],
+            StochasticUnit: e.unit_datasets[StochasticUnit],
+        }
+        observed = e.get_system_by_type([StaticUnit, StochasticUnit]).unit_datasets
+        self.assertEqual(expected, observed)
+
+        # sub-test 2
+        expected = {StorageUnit: e.unit_datasets[StorageUnit]}
+        observed = e.get_system_by_type(StorageUnit).unit_datasets
+        self.assertEqual(expected, observed)
+
 
 class TestProbabilisticAnalysis(unittest.TestCase):
     def test_probabilistic_simulation_1(self):
@@ -739,7 +817,7 @@ class TestProbabilisticAnalysis(unittest.TestCase):
 
 
 class TestResourceAdequacyMetric(unittest.TestCase):
-    def test_eue_1(self):
+    def test_eue_def(self):
         """Definition of EUE (single trial)"""
         from assetra.core import EnergySystemBuilder, StaticUnit
         from assetra.probabilistic_analysis import (
@@ -779,7 +857,7 @@ class TestResourceAdequacyMetric(unittest.TestCase):
         observed = ra.evaluate()
         self.assertEqual(expected, observed)
 
-    def test_eue_2(self):
+    def test_eue_multi_trial(self):
         """Definition of EUE (multi-trial)"""
         from assetra.core import EnergySystemBuilder, StaticUnit
         from assetra.probabilistic_analysis import (
@@ -819,7 +897,7 @@ class TestResourceAdequacyMetric(unittest.TestCase):
         observed = ra.evaluate()
         self.assertEqual(expected, observed)
 
-    def test_eue_3(self):
+    def test_eue_excess_capacity(self):
         """EUE should ignore excess capacity in non-loss-of-load hours"""
         from assetra.core import EnergySystemBuilder, StaticUnit
         from assetra.probabilistic_analysis import (
@@ -859,34 +937,366 @@ class TestResourceAdequacyMetric(unittest.TestCase):
         observed = ra.evaluate()
         self.assertEqual(expected, observed)
 
+    def test_lolh_def(self):
+        """Definition of LOLH (single trial)"""
+        from assetra.core import EnergySystemBuilder, StaticUnit
+        from assetra.probabilistic_analysis import (
+            ProbabilisticSimulation,
+            LossOfLoadHours,
+        )
+
+        # create system
+        b = EnergySystemBuilder()
+        b.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([-1, 0]),
+            )
+        )
+        e = b.build()
+
+        # create simulation
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00", end_hour="2016-01-01 01:00", trial_size=1
+        )
+        ps.assign_energy_system(e)
+
+        # create adequacy model
+        ra = LossOfLoadHours(ps)
+
+        # test
+        expected = 1
+        observed = ra.evaluate()
+        self.assertEqual(expected, observed)
+
+    def test_lolh_multi_trial(self):
+        """Definition of LOLH (multi trial)"""
+        from assetra.core import EnergySystemBuilder, StaticUnit
+        from assetra.probabilistic_analysis import (
+            ProbabilisticSimulation,
+            LossOfLoadHours,
+        )
+
+        # create system
+        b = EnergySystemBuilder()
+        b.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([-1, 0]),
+            )
+        )
+        e = b.build()
+
+        # create simulation
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00", end_hour="2016-01-01 01:00", trial_size=3
+        )
+        ps.assign_energy_system(e)
+
+        # create adequacy model
+        ra = LossOfLoadHours(ps)
+
+        # test
+        expected = 1
+        observed = ra.evaluate()
+        self.assertEqual(expected, observed)
+
+    def test_lolh_magnitude(self):
+        """LOLH does not account for magnitude of shortfall"""
+        from assetra.core import EnergySystemBuilder, StaticUnit
+        from assetra.probabilistic_analysis import (
+            ProbabilisticSimulation,
+            LossOfLoadHours,
+        )
+
+        # create system
+        b = EnergySystemBuilder()
+        b.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([-3, 0]),
+            )
+        )
+        e = b.build()
+
+        # create simulation
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00", end_hour="2016-01-01 01:00", trial_size=1
+        )
+        ps.assign_energy_system(e)
+
+        # create adequacy model
+        ra = LossOfLoadHours(ps)
+
+        # test
+        expected = 1
+        observed = ra.evaluate()
+        self.assertEqual(expected, observed)
+
 
 class TestResourceContribution(unittest.TestCase):
-    def test_elcc_1(self):
-        return
+    def test_elcc_ideal_generator(self):
+        """ELCC of ideal generator is 1."""
         from assetra.core import StaticUnit, EnergySystemBuilder
-        from assetra.probabilistic_analysis import ProbabilisticSimulation
-        from assetra.adequacy_metrics import ExpectedUnservedEnergy
-        from assetra.contribution_metrics import EffectiveLoadCarryingCapability
+        from assetra.probabilistic_analysis import (
+            ProbabilisticSimulation,
+            ExpectedUnservedEnergy,
+            EffectiveLoadCarryingCapability,
+        )
 
         # target system
-        e1 = EnergySystemBuilder()
-        u1 = StaticUnit(id=1, nameplate_capacity=1, hourly_capacity=[0, 0, -1, 0])
-        e1.add_unit(u1)
+        b1 = EnergySystemBuilder()
+        b1.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([0, 0, -1, 0]),
+            )
+        )
+        e1 = b1.build()
 
         # additional system
-        e2 = EnergySystemBuilder()
-        u2 = StaticUnit(id=1, nameplate_capacity=1, hourly_capacity=[1, 1, 1, 1])
-        e2.add_unit(u2)
+        b2 = EnergySystemBuilder()
+        b2.add_unit(
+            StaticUnit(
+                id=2,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([1, 1, 1, 1]),
+            )
+        )
+        e2 = b2.build()
 
         # simulation
-        ps = ProbabilisticSimulation(e1, start_hour=0, end_hour=4, trial_size=1)
-        ra = ExpectedUnservedEnergy(ps)
-        rc = EffectiveLoadCarryingCapability(ra, e2, 0.01)
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00:00",
+            end_hour="2016-01-01 03:00:00",
+            trial_size=1,
+        )
+        rc = EffectiveLoadCarryingCapability(e1, ps, ExpectedUnservedEnergy)
 
         # test
         expected = 1.0
-        observed = rc.evaluate()
-        self.assertEqual(expected, observed)
+        observed = rc.evaluate(e2)
+        self.assertAlmostEqual(expected, observed, 2)
+
+    def test_elcc_null_generator(self):
+        """ELCC of zero capacity generator is 0."""
+        from assetra.core import StaticUnit, EnergySystemBuilder
+        from assetra.probabilistic_analysis import (
+            ProbabilisticSimulation,
+            ExpectedUnservedEnergy,
+            EffectiveLoadCarryingCapability,
+        )
+
+        # target system
+        b1 = EnergySystemBuilder()
+        b1.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([0, 0, -1, 0]),
+            )
+        )
+        e1 = b1.build()
+
+        # additional system
+        b2 = EnergySystemBuilder()
+        b2.add_unit(
+            StaticUnit(
+                id=2,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([0, 0, 0, 0]),
+            )
+        )
+        e2 = b2.build()
+
+        # simulation
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00:00",
+            end_hour="2016-01-01 03:00:00",
+            trial_size=1,
+        )
+        rc = EffectiveLoadCarryingCapability(e1, ps, ExpectedUnservedEnergy)
+
+        # test
+        expected = 0.0
+        observed = rc.evaluate(e2)
+        self.assertAlmostEqual(expected, observed, 2)
+
+    def test_elcc_vol_addition(self):
+        """ELCC should dispatch added volatile resources."""
+        from assetra.core import StaticUnit, StorageUnit, EnergySystemBuilder
+        from assetra.probabilistic_analysis import (
+            ProbabilisticSimulation,
+            ExpectedUnservedEnergy,
+            EffectiveLoadCarryingCapability,
+        )
+
+        # target system
+        b1 = EnergySystemBuilder()
+        b1.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([-1, -1, 1, 1]),
+            )
+        )
+        e1 = b1.build()
+
+        # additional system
+        b2 = EnergySystemBuilder()
+        b2.add_unit(
+            StorageUnit(
+                id=2,
+                nameplate_capacity=1,
+                charge_rate=1,
+                discharge_rate=1,
+                charge_capacity=1,
+                roundtrip_efficiency=1,
+            )
+        )
+        e2 = b2.build()
+
+        # simulation
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00:00",
+            end_hour="2016-01-01 03:00:00",
+            trial_size=1,
+        )
+        rc = EffectiveLoadCarryingCapability(e1, ps, ExpectedUnservedEnergy)
+
+        # test
+        expected = 0.5
+        observed = rc.evaluate(e2)
+        self.assertAlmostEqual(expected, observed, 2)
+
+    def test_elcc_vol_system(self):
+        """ELCC should redispatch existing storage"""
+        from assetra.core import StaticUnit, StorageUnit, EnergySystemBuilder
+        from assetra.probabilistic_analysis import (
+            ProbabilisticSimulation,
+            ExpectedUnservedEnergy,
+            EffectiveLoadCarryingCapability,
+        )
+
+        # target system
+        b1 = EnergySystemBuilder()
+        b1.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([-1, -1]),
+            )
+        )
+        b1.add_unit(
+            StorageUnit(
+                id=2,
+                nameplate_capacity=1,
+                charge_rate=1,
+                discharge_rate=1,
+                charge_capacity=1,
+                roundtrip_efficiency=1,
+            )
+        )
+        e1 = b1.build()
+
+        # additional system
+        b2 = EnergySystemBuilder()
+        b2.add_unit(
+            StaticUnit(
+                id=3,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([1, 0]),
+            )
+        )
+        e2 = b2.build()
+
+        # simulation
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00:00",
+            end_hour="2016-01-01 01:00:00",
+            trial_size=1,
+        )
+        rc = EffectiveLoadCarryingCapability(e1, ps, ExpectedUnservedEnergy)
+
+        # test
+        expected = 0.5
+        observed = rc.evaluate(e2)
+        self.assertAlmostEqual(expected, observed, 2)
+
+    def test_elcc_sequential(self):
+        """ELCC should redispatch existing storage"""
+        from assetra.core import StaticUnit, StorageUnit, EnergySystemBuilder
+        from assetra.probabilistic_analysis import (
+            ProbabilisticSimulation,
+            ExpectedUnservedEnergy,
+            EffectiveLoadCarryingCapability,
+        )
+
+        # target system
+        b1 = EnergySystemBuilder()
+        b1.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=0,
+                hourly_capacity=get_sample_time_series([-1, 0, -1]),
+            )
+        )
+        e1 = b1.build()
+
+        # simulation
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00:00",
+            end_hour="2016-01-01 02:00:00",
+            trial_size=1,
+        )
+        rc = EffectiveLoadCarryingCapability(e1, ps, ExpectedUnservedEnergy)
+
+        # additional system
+        b2 = EnergySystemBuilder()
+        b2.add_unit(
+            StaticUnit(
+                id=2,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([0, 1, 0]),
+            )
+        )
+        e2 = b2.build()
+
+        # sub-test 1
+        expected = 0.0
+        observed = rc.evaluate(e2)
+        self.assertAlmostEqual(expected, observed, 2)
+
+        # add storage unit
+        b2.add_unit(
+            StorageUnit(
+                id=4,
+                nameplate_capacity=1,
+                charge_rate=1,
+                discharge_rate=1,
+                charge_capacity=1,
+                roundtrip_efficiency=1,
+            )
+        )
+        e2 = b2.build()
+
+        # sub-test 2
+        expected = 0.666
+        observed = rc.evaluate(e2)
+        self.assertAlmostEqual(expected, observed, 2)
+
+        # remove stochastic unit
+        b2.remove_unit(b2.energy_units[0])
+        e2 = b2.build()
+
+        # sub-test 2
+        expected = 0.333
+        observed = rc.evaluate(e2)
+        self.assertAlmostEqual(expected, observed, 2)
 
 
 if __name__ == "__main__":
