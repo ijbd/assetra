@@ -1,3 +1,4 @@
+=======
 Modules
--------
-.. autoclass :: EnergyUnit
+=======
+.. automodule :: assetra

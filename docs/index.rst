@@ -1,5 +1,5 @@
 Welcome to the ASSET Lab Resource Adequacy Package's documentation!
-======================================
+===================================================================  
 
 .. toctree::
    :maxdepth: 2
