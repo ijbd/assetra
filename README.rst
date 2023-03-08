@@ -1,7 +1,6 @@
-=======================================
-ASSET Lab Resource Adequacy Package (assetra)
-=======================================
-
+=======
+ASSETRA
+=======
 
 .. image:: https://img.shields.io/pypi/v/assetra.svg
         :target: https://pypi.python.org/pypi/assetra
@@ -11,9 +10,7 @@ ASSET Lab Resource Adequacy Package (assetra)
         :alt: Documentation Status
 
 
-
-
-An open-source energy system resource adequacy package maintained by the University of Michigan ASSET Lab.
+The ASSET Lab Resource adequacy package (assetra) is an open-source energy system resource adequacy package maintained by the University of Michigan ASSET Lab.
 
 
 * Free software: MIT license

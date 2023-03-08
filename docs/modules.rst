@@ -1,4 +1,5 @@
 =======
 Modules
 =======
-.. automodule :: assetra
+.. automodule :: assetra.core
+    :members:
