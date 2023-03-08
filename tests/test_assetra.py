@@ -11,7 +11,9 @@ sys.path.append("..")
 def get_sample_time_series(data, start="2016-01-01 00:00"):
     return xr.DataArray(
         data=[float(d) for d in data],
-        coords=dict(time=xr.date_range(start=start, periods=len(data), freq="H")),
+        coords=dict(
+            time=xr.date_range(start=start, periods=len(data), freq="H")
+        ),
     )
 
 
@@ -55,7 +57,9 @@ class TestCore(unittest.TestCase):
             ),
             coords=dict(
                 energy_unit=[1, 2],
-                time=xr.date_range(start="2016-01-01 00:00", periods=2, freq="H"),
+                time=xr.date_range(
+                    start="2016-01-01 00:00", periods=2, freq="H"
+                ),
             ),
         )
         observed = StaticUnit.to_unit_dataset(units)
@@ -73,7 +77,9 @@ class TestCore(unittest.TestCase):
             ),
             coords=dict(
                 energy_unit=[1, 2],
-                time=xr.date_range(start="2016-01-01 00:00", periods=2, freq="H"),
+                time=xr.date_range(
+                    start="2016-01-01 00:00", periods=2, freq="H"
+                ),
             ),
         )
 
@@ -89,7 +95,9 @@ class TestCore(unittest.TestCase):
 
         # create unit
         unit = StaticUnit(
-            id=1, nameplate_capacity=1, hourly_capacity=get_sample_time_series([1, 2])
+            id=1,
+            nameplate_capacity=1,
+            hourly_capacity=get_sample_time_series([1, 2]),
         )
         unit_dataset = StaticUnit.to_unit_dataset([unit])
 
@@ -137,7 +145,9 @@ class TestCore(unittest.TestCase):
             ),
             coords=dict(
                 energy_unit=[1, 2],
-                time=xr.date_range(start="2016-01-01 00:00", periods=2, freq="H"),
+                time=xr.date_range(
+                    start="2016-01-01 00:00", periods=2, freq="H"
+                ),
             ),
         )
         observed = StochasticUnit.to_unit_dataset(units)
@@ -159,7 +169,9 @@ class TestCore(unittest.TestCase):
             ),
             coords=dict(
                 energy_unit=[1, 2],
-                time=xr.date_range(start="2016-01-01 00:00", periods=2, freq="H"),
+                time=xr.date_range(
+                    start="2016-01-01 00:00", periods=2, freq="H"
+                ),
             ),
         )
 
@@ -391,7 +403,9 @@ class TestCore(unittest.TestCase):
         unit_dataset = StorageUnit.to_unit_dataset([unit])
 
         # create net capacity matrix
-        net_capacity_matrix = get_sample_net_capacity_matrix([[-1, 1, 1, 1, 1, 1]])
+        net_capacity_matrix = get_sample_net_capacity_matrix(
+            [[-1, 1, 1, 1, 1, 1]]
+        )
 
         # test
         expected = get_sample_net_capacity_matrix([[1, -1, -1, -1, -1, 0]])
@@ -435,7 +449,7 @@ class TestCore(unittest.TestCase):
 
         # test
         b.add_unit(u)
-        self.assertRaises(RuntimeError, b.add_unit, u)
+        self.assertRaises(RuntimeWarning, b.add_unit, u)
 
     def test_system_builder_valid_types(self):
         """System builder should only accept valid unit types."""
@@ -452,7 +466,7 @@ class TestCore(unittest.TestCase):
         )
 
         # test
-        self.assertRaises(RuntimeError, b.add_unit, u)
+        self.assertRaises(RuntimeWarning, b.add_unit, u)
 
     def test_system_builder_build_single(self):
         """System builder should create all unit datasets."""
@@ -500,7 +514,9 @@ class TestCore(unittest.TestCase):
             id=2,
             nameplate_capacity=2,
             hourly_capacity=get_sample_time_series([0, 0, 0]),
-            hourly_forced_outage_rate=get_sample_time_series([0.05, 0.05, 0.05]),
+            hourly_forced_outage_rate=get_sample_time_series(
+                [0.05, 0.05, 0.05]
+            ),
         )
 
         u3 = StaticUnit(
@@ -564,7 +580,9 @@ class TestCore(unittest.TestCase):
                     id=2,
                     nameplate_capacity=2,
                     hourly_capacity=get_sample_time_series([1, 1, 1]),
-                    hourly_forced_outage_rate=get_sample_time_series([0.8, 0.8, 0.8]),
+                    hourly_forced_outage_rate=get_sample_time_series(
+                        [0.8, 0.8, 0.8]
+                    ),
                 )
             )
             b
@@ -661,7 +679,9 @@ class TestCore(unittest.TestCase):
             StaticUnit: e.unit_datasets[StaticUnit],
             StochasticUnit: e.unit_datasets[StochasticUnit],
         }
-        observed = e.get_system_by_type([StaticUnit, StochasticUnit]).unit_datasets
+        observed = e.get_system_by_type(
+            [StaticUnit, StochasticUnit]
+        ).unit_datasets
         self.assertEqual(expected, observed)
 
         # sub-test 2
@@ -698,7 +718,9 @@ class TestProbabilisticAnalysis(unittest.TestCase):
 
         # create simulation
         ps = ProbabilisticSimulation(
-            start_hour="2016-01-01 0:00", end_hour="2016-01-01 02:00", trial_size=3
+            start_hour="2016-01-01 0:00",
+            end_hour="2016-01-01 02:00",
+            trial_size=3,
         )
         ps.assign_energy_system(e)
 
@@ -734,7 +756,9 @@ class TestProbabilisticAnalysis(unittest.TestCase):
 
         # create simulation
         ps = ProbabilisticSimulation(
-            start_hour="2016-01-01 01:00", end_hour="2016-01-01 02:00", trial_size=4
+            start_hour="2016-01-01 01:00",
+            end_hour="2016-01-01 02:00",
+            trial_size=4,
         )
         ps.assign_energy_system(e)
 
@@ -792,7 +816,9 @@ class TestProbabilisticAnalysis(unittest.TestCase):
 
         # create simulation
         ps = ProbabilisticSimulation(
-            start_hour="2016-01-01 0:00", end_hour="2016-01-01 02:00", trial_size=1
+            start_hour="2016-01-01 0:00",
+            end_hour="2016-01-01 02:00",
+            trial_size=1,
         )
         ps.assign_energy_system(e)
 
@@ -845,7 +871,9 @@ class TestResourceAdequacyMetric(unittest.TestCase):
 
         # create simulation
         ps = ProbabilisticSimulation(
-            start_hour="2016-01-01 00:00", end_hour="2016-01-01 01:00", trial_size=1
+            start_hour="2016-01-01 00:00",
+            end_hour="2016-01-01 01:00",
+            trial_size=1,
         )
         ps.assign_energy_system(e)
 
@@ -885,7 +913,9 @@ class TestResourceAdequacyMetric(unittest.TestCase):
 
         # create simulation
         ps = ProbabilisticSimulation(
-            start_hour="2016-01-01 00:00", end_hour="2016-01-01 01:00", trial_size=3
+            start_hour="2016-01-01 00:00",
+            end_hour="2016-01-01 01:00",
+            trial_size=3,
         )
         ps.assign_energy_system(e)
 
@@ -925,7 +955,9 @@ class TestResourceAdequacyMetric(unittest.TestCase):
 
         # create simulation
         ps = ProbabilisticSimulation(
-            start_hour="2016-01-01 00:00", end_hour="2016-01-01 01:00", trial_size=1
+            start_hour="2016-01-01 00:00",
+            end_hour="2016-01-01 01:00",
+            trial_size=1,
         )
         ps.assign_energy_system(e)
 
@@ -958,7 +990,9 @@ class TestResourceAdequacyMetric(unittest.TestCase):
 
         # create simulation
         ps = ProbabilisticSimulation(
-            start_hour="2016-01-01 00:00", end_hour="2016-01-01 01:00", trial_size=1
+            start_hour="2016-01-01 00:00",
+            end_hour="2016-01-01 01:00",
+            trial_size=1,
         )
         ps.assign_energy_system(e)
 
@@ -991,7 +1025,9 @@ class TestResourceAdequacyMetric(unittest.TestCase):
 
         # create simulation
         ps = ProbabilisticSimulation(
-            start_hour="2016-01-01 00:00", end_hour="2016-01-01 01:00", trial_size=3
+            start_hour="2016-01-01 00:00",
+            end_hour="2016-01-01 01:00",
+            trial_size=3,
         )
         ps.assign_energy_system(e)
 
@@ -1024,7 +1060,9 @@ class TestResourceAdequacyMetric(unittest.TestCase):
 
         # create simulation
         ps = ProbabilisticSimulation(
-            start_hour="2016-01-01 00:00", end_hour="2016-01-01 01:00", trial_size=1
+            start_hour="2016-01-01 00:00",
+            end_hour="2016-01-01 01:00",
+            trial_size=1,
         )
         ps.assign_energy_system(e)
 
