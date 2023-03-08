@@ -25,7 +25,9 @@ class ProbabilisticSimulation:
     """Class responsible for creating/storing the Monte Carlo
     trials for EnergySystem objects."""
 
-    def __init__(self, start_hour: datetime, end_hour: datetime, trial_size: int):
+    def __init__(
+        self, start_hour: datetime, end_hour: datetime, trial_size: int
+    ):
         self._start_hour = start_hour
         self._end_hour = end_hour
         self._trial_size = trial_size
@@ -60,9 +62,10 @@ class ProbabilisticSimulation:
 
         # check for energy system
         if not isinstance(self._energy_system, EnergySystem):
-            raise RuntimeError(
-                "Energy system not assigned to probabilistic simulation object."
-            )
+            log.warning(
+                "Energy system not assigned to simulation object."
+                )
+            raise RuntimeError()
 
         # setup net hourly capacity matrix
         time_stamps = xr.date_range(
@@ -80,13 +83,17 @@ class ProbabilisticSimulation:
         else:
             self._net_hourly_capacity_matrix = xr.DataArray(
                 data=np.zeros((self._trial_size, len(time_stamps))),
-                coords=dict(trial=np.arange(self._trial_size), time=time_stamps),
+                coords=dict(
+                    trial=np.arange(self._trial_size), time=time_stamps
+                ),
             )
 
         # initialize capacity by unit type
         unit_types = list(self._energy_system.unit_datasets)
         self._hourly_capacity_matrix = xr.DataArray(
-            data=np.zeros((len(unit_types), self._trial_size, len(time_stamps))),
+            data=np.zeros(
+                (len(unit_types), self._trial_size, len(time_stamps))
+            ),
             coords=dict(
                 unit_type=unit_types,
                 trial=np.arange(self._trial_size),
@@ -95,16 +102,19 @@ class ProbabilisticSimulation:
         )
 
         # iterate through unit datasets
-        for unit_type, unit_dataset in self._energy_system.unit_datasets.items():
+        for (
+            unit_type,
+            unit_dataset,
+        ) in self._energy_system.unit_datasets.items():
             self._hourly_capacity_matrix.loc[
                 unit_type
             ] = unit_type.get_probabilistic_capacity_matrix(
                 unit_dataset,
                 self._net_hourly_capacity_matrix,
             ).values
-            self._net_hourly_capacity_matrix += self._hourly_capacity_matrix.sel(
-                unit_type=unit_type
-            ).values
+            self._net_hourly_capacity_matrix += (
+                self._hourly_capacity_matrix.sel(unit_type=unit_type).values
+            )
 
 
 class ResourceAdequacyMetric(ABC):
@@ -118,11 +128,14 @@ class ResourceAdequacyMetric(ABC):
 
 class ExpectedUnservedEnergy(ResourceAdequacyMetric):
     def evaluate(self):
-        hourly_unserved_energy = self.simulation.net_hourly_capacity_matrix.where(
-            self.simulation.net_hourly_capacity_matrix < 0, 0
+        hourly_unserved_energy = (
+            self.simulation.net_hourly_capacity_matrix.where(
+                self.simulation.net_hourly_capacity_matrix < 0, 0
+            )
         )
         return float(
-            -hourly_unserved_energy.sum() / hourly_unserved_energy.sizes["trial"]
+            -hourly_unserved_energy.sum()
+            / hourly_unserved_energy.sizes["trial"]
         )
 
 
@@ -155,8 +168,8 @@ class EffectiveLoadCarryingCapability:
 
         # decompose system into volatile and non-volatile components
         # non-volatile simulation
-        self._original_system_non_volatile = self._original_system.get_system_by_type(
-            NONVOLATILE_UNIT_TYPES
+        self._original_system_non_volatile = (
+            self._original_system.get_system_by_type(NONVOLATILE_UNIT_TYPES)
         )
         self._original_non_volatile_simulation = self._simulation.copy()
         self._original_non_volatile_simulation.assign_energy_system(
@@ -164,8 +177,8 @@ class EffectiveLoadCarryingCapability:
         )
 
         # volatile simulation
-        self._original_system_volatile = self._original_system.get_system_by_type(
-            VOLATILE_UNIT_TYPES
+        self._original_system_volatile = (
+            self._original_system.get_system_by_type(VOLATILE_UNIT_TYPES)
         )
         self._original_volatile_simulation = self._simulation.copy()
         self._original_volatile_simulation.assign_energy_system(
@@ -210,9 +223,13 @@ class EffectiveLoadCarryingCapability:
         )
 
         # volatile simulation
-        additional_system_volatile = addition.get_system_by_type(VOLATILE_UNIT_TYPES)
+        additional_system_volatile = addition.get_system_by_type(
+            VOLATILE_UNIT_TYPES
+        )
         additional_volatile_simulation = self._simulation.copy()
-        additional_volatile_simulation.assign_energy_system(additional_system_volatile)
+        additional_volatile_simulation.assign_energy_system(
+            additional_system_volatile
+        )
 
         # run non-volatile_simulation
         additional_non_volatile_simulation.run()
@@ -228,7 +245,8 @@ class EffectiveLoadCarryingCapability:
         additional_demand_lower_bound = 0
         additional_demand = (
             additional_demand_lower_bound
-            + (additional_demand_upper_bound - additional_demand_lower_bound) / 2
+            + (additional_demand_upper_bound - additional_demand_lower_bound)
+            / 2
         )
 
         # run chained volatile simulation
@@ -250,7 +268,11 @@ class EffectiveLoadCarryingCapability:
         iteration = 0
 
         while diff > threshold:
-            print(iteration, self._original_resource_adequacy, new_resource_adequacy)
+            print(
+                iteration,
+                self._original_resource_adequacy,
+                new_resource_adequacy,
+            )
             # check iteration count
             if iteration > MAX_ITERATIONS:
                 return additional_demand
@@ -261,7 +283,10 @@ class EffectiveLoadCarryingCapability:
                 additional_demand_upper_bound = additional_demand
                 additional_demand = (
                     additional_demand_lower_bound
-                    + (additional_demand_upper_bound - additional_demand_lower_bound)
+                    + (
+                        additional_demand_upper_bound
+                        - additional_demand_lower_bound
+                    )
                     / 2
                 )
             else:
@@ -269,7 +294,10 @@ class EffectiveLoadCarryingCapability:
                 additional_demand_lower_bound = additional_demand
                 additional_demand = (
                     additional_demand_lower_bound
-                    + (additional_demand_upper_bound - additional_demand_lower_bound)
+                    + (
+                        additional_demand_upper_bound
+                        - additional_demand_lower_bound
+                    )
                     / 2
                 )
 

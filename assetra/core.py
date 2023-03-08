@@ -1,3 +1,13 @@
+'''TODO: Overview of different classes and internal model.
+
+Examples:
+
+    TODO: link to usage page
+
+Attributes:
+
+    TODO
+'''
 from __future__ import annotations
 from abc import abstractmethod, ABC
 from logging import getLogger
