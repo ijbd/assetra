@@ -5,13 +5,13 @@ import timeit
 sys.path.append("..")
 
 # internal
-from assetra.core import (
-    EnergySystemBuilder,
+from assetra.units import (
     StaticUnit,
     StochasticUnit,
     StorageUnit,
 )
-from assetra.probabilistic_analysis import ProbabilisticSimulation
+from assetra.system import EnergySystemBuilder
+from assetra.simulation import ProbabilisticSimulation
 
 # external
 import xarray as xr
