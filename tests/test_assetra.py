@@ -454,7 +454,7 @@ class TestAssetraSystem(unittest.TestCase):
         b.add_unit(u)
         self.assertRaises(RuntimeWarning, b.add_unit, u)
 
-    def test_system_builder_valid_types(self):
+    def test_system_builder_invalid_type(self):
         """System builder should only accept valid unit types."""
         from assetra.units import StaticUnit
         from assetra.system import EnergySystemBuilder
@@ -472,6 +472,27 @@ class TestAssetraSystem(unittest.TestCase):
         # test
         self.assertRaises(RuntimeWarning, b.add_unit, u)
 
+    def test_system_builder_valid_type(self):
+        """System builder should only accept valid unit types."""
+        from assetra.units import StaticUnit, VOLATILE_UNIT_TYPES
+        from assetra.system import EnergySystemBuilder
+
+        class ValidUnit(StaticUnit):
+            pass
+
+        VOLATILE_UNIT_TYPES.append(ValidUnit)
+
+        
+        b = EnergySystemBuilder()
+        u = ValidUnit(
+            id=1,
+            nameplate_capacity=1,
+            hourly_capacity=get_sample_time_series([0, 0, 0]),
+        )
+
+        # test no raised error
+        b.add_unit(u)
+        
     def test_system_builder_build_single(self):
         """System builder should create all unit datasets."""
         from assetra.units import StaticUnit
