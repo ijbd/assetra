@@ -14,8 +14,8 @@ LOG = getLogger(__name__)
 
 
 class ProbabilisticSimulation:
-    """Class responsible for creating/storing the Monte Carlo
-    trials for EnergySystem objects.
+    """Class responsible for creating/storing aggregate probabilistic
+    capacity matrices for EnergySystem objects.
 
     Args:
         start_hour (datetime) : Starting simulation hour,

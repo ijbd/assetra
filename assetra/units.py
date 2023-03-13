@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import numpy as np
 import xarray as xr
 
-log = getLogger(__name__)
+LOG = getLogger(__name__)
 
 # ENERGY UNIT(S)
 
