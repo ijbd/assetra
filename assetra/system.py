@@ -6,9 +6,14 @@ from pathlib import Path
 import xarray as xr
 
 # package
-from assetra.units import EnergyUnit, RESPONSIVE_UNIT_TYPES, NONRESPONSIVE_UNIT_TYPES
+from assetra.units import (
+    EnergyUnit,
+    RESPONSIVE_UNIT_TYPES,
+    NONRESPONSIVE_UNIT_TYPES,
+)
 
 LOG = getLogger(__name__)
+
 
 class EnergySystem:
     """Class responsible for managing unit datasets (built energy systems)

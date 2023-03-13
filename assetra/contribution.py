@@ -5,6 +5,7 @@ from assetra.metrics import ResourceAdequacyMetric
 
 MAX_ITERATIONS = 10
 
+
 class EffectiveLoadCarryingCapability:
     def __init__(
         self,
