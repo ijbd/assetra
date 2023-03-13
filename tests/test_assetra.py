@@ -474,13 +474,13 @@ class TestAssetraSystem(unittest.TestCase):
 
     def test_system_builder_valid_type(self):
         """System builder should only accept valid unit types."""
-        from assetra.units import StaticUnit, VOLATILE_UNIT_TYPES
+        from assetra.units import StaticUnit, RESPONSIVE_UNIT_TYPES
         from assetra.system import EnergySystemBuilder
 
         class ValidUnit(StaticUnit):
             pass
 
-        VOLATILE_UNIT_TYPES.append(ValidUnit)
+        RESPONSIVE_UNIT_TYPES.append(ValidUnit)
 
         
         b = EnergySystemBuilder()
@@ -632,8 +632,8 @@ class TestAssetraSystem(unittest.TestCase):
             # delete dir
             save_dir.rmdir()
 
-    def test_system_nameplate_capacity(self):
-        """Energy system should return total nameplate capacity"""
+    def test_system_capacity(self):
+        """Energy system should return total system capacity"""
         from assetra.units import StaticUnit, StochasticUnit
         from assetra.system import EnergySystemBuilder
 
@@ -657,7 +657,7 @@ class TestAssetraSystem(unittest.TestCase):
 
         # test
         expected = 2
-        observed = e.nameplate_capacity
+        observed = e.system_capacity
         self.assertEqual(expected, observed)
 
     def test_system_get_system_by_type(self):
@@ -715,7 +715,7 @@ class TestAssetraSystem(unittest.TestCase):
 
 
 class TestAssetraSimulation(unittest.TestCase):
-    def test_probabilistic_simulation_1(self):
+    def test_capacity_matrix(self):
         """Probabilistic simulation should generate hourly capacity matrix."""
         from assetra.units import StaticUnit
         from assetra.system import EnergySystemBuilder
@@ -754,7 +754,7 @@ class TestAssetraSimulation(unittest.TestCase):
         observed = ps.net_hourly_capacity_matrix
         self.assertTrue(expected.equals(observed))
 
-    def test_probabilistic_simulation_2(self):
+    def test_time_indexing(self):
         """Probabilistic simulation should allow flexible time-indexing."""
         from assetra.units import StaticUnit
         from assetra.system import EnergySystemBuilder
@@ -795,7 +795,7 @@ class TestAssetraSimulation(unittest.TestCase):
         observed = ps.net_hourly_capacity_matrix
         self.assertTrue(expected.equals(observed))
 
-    def test_probabilistic_simulation_3(self):
+    def test_by_type(self):
         """Probabilistic simulation should allow flexible time-indexing."""
         from assetra.units import StaticUnit, StorageUnit
         from assetra.system import EnergySystemBuilder
@@ -867,6 +867,63 @@ class TestAssetraSimulation(unittest.TestCase):
             [[2, 0, -1]],
         )
         observed = ps.get_hourly_capacity_matrix_by_type(StorageUnit)
+
+    def test_custom_type(self):
+        """Probabilistic simulation should recognize added types."""
+        from assetra.units import StaticUnit, StorageUnit, RESPONSIVE_UNIT_TYPES
+        from assetra.system import EnergySystemBuilder
+        from assetra.simulation import ProbabilisticSimulation
+
+        # create system
+        b = EnergySystemBuilder()
+        b.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([-1, -1, -1]),
+            )
+        )
+
+        # create custom type
+        class CustomStorageUnit(StorageUnit):
+            pass
+
+        RESPONSIVE_UNIT_TYPES.append(CustomStorageUnit)
+
+        b.add_unit(
+            CustomStorageUnit(
+                id=2,
+                nameplate_capacity=1,
+                charge_rate=1,
+                discharge_rate=1,
+                charge_capacity=1,
+                roundtrip_efficiency=1,
+            )
+        )
+
+        # build system
+        e = b.build()
+
+        # create simulation
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 0:00",
+            end_hour="2016-01-01 02:00",
+            trial_size=1
+        )
+        ps.assign_energy_system(e)
+
+        # sub-test 1
+        expected = get_sample_net_capacity_matrix(
+            [[0, -1, -1]]
+        )
+        observed = ps.net_hourly_capacity_matrix
+        self.assertTrue(expected.equals(observed))
+
+        # sub-test 2
+        expected = get_sample_net_capacity_matrix(
+            [[1, 0, 0]]
+        )
+        observed = ps.get_hourly_capacity_matrix_by_type(CustomStorageUnit)
 
 
 class TestAssetraMetrics(unittest.TestCase):
@@ -1184,7 +1241,7 @@ class TestAssetraContribution(unittest.TestCase):
         self.assertAlmostEqual(expected, observed, 2)
 
     def test_elcc_vol_addition(self):
-        """ELCC should dispatch added volatile resources."""
+        """ELCC should dispatch added responsive resources."""
         from assetra.units import StaticUnit, StorageUnit
         from assetra.system import EnergySystemBuilder
         from assetra.simulation import ProbabilisticSimulation
