@@ -111,6 +111,27 @@ class TestAssetraUnits(unittest.TestCase):
         )
         self.assertTrue(expected.equals(observed))
 
+    def test_demand_unit_probabilistic_capacity(self):
+        """Demand unit returns negative hourly demand"""
+        from assetra.units import DemandUnit
+
+        # create unit
+        unit = DemandUnit(
+            id=1,
+            hourly_demand=get_sample_time_series([1, 2]),
+        )
+        unit_dataset = DemandUnit.to_unit_dataset([unit])
+
+        # get net capacity matrix
+        net_capacity_matrix = get_sample_net_capacity_matrix([[0, 0]])
+
+        # test
+        expected = get_sample_net_capacity_matrix([[-1, -2]])
+        observed = DemandUnit.get_probabilistic_capacity_matrix(
+            unit_dataset, net_capacity_matrix
+        )
+        self.assertTrue(expected.equals(observed))
+
     def test_stochastic_unit_list_to_dataset(self):
         """Generate xarray dataset from unit list"""
         from assetra.units import StochasticUnit

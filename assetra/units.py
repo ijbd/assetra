@@ -11,6 +11,7 @@ log = getLogger(__name__)
 
 # ENERGY UNIT(S)
 
+
 @dataclass(frozen=True)
 class EnergyUnit(ABC):
     """Abstract base class for all energy units.
@@ -584,6 +585,26 @@ class StorageUnit(EnergyUnit):
                 )
 
         return net_adj_hourly_capacity_matrix - net_hourly_capacity_matrix
+
+
+class DemandUnit(StaticUnit):
+    """Derived energy unit class, providing a more meaningful interface for
+    demand. Internally, demand is treated as a static unit with negative
+    capacity and a nameplate rating of zero.
+
+    This interface converts positive hourly demand into negative hourly
+    capacity
+
+    Args:
+        id (int): Unique identifying number
+        hourly_demand (xr.DataArray) : Hourly demand contained in DataArray
+            with dimension (time) and datetime coordinates.
+    """
+
+    def __init__(self, id: int, hourly_demand: xr.DataArray):
+        StaticUnit.__init__(
+            self, id, nameplate_capacity=0, hourly_capacity=-hourly_demand
+        )
 
 
 # for successive simulations (e.g. ELCC), need to differentiate between
