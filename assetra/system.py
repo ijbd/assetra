@@ -6,7 +6,7 @@ from pathlib import Path
 import xarray as xr
 
 # package
-from assetra.units import EnergyUnit, VOLATILE_UNIT_TYPES, NONVOLATILE_UNIT_TYPES
+from assetra.units import EnergyUnit, RESPONSIVE_UNIT_TYPES, NONRESPONSIVE_UNIT_TYPES
 
 LOG = getLogger(__name__)
 
@@ -23,14 +23,14 @@ class EnergySystem:
 
         # check input
         for key in unit_datasets:
-            if key not in (VOLATILE_UNIT_TYPES + NONVOLATILE_UNIT_TYPES):
+            if key not in (RESPONSIVE_UNIT_TYPES + NONRESPONSIVE_UNIT_TYPES):
                 LOG.error(
                     "Constructing energy system with invalid unit dataset"
                 )
                 raise RuntimeWarning
 
     @property
-    def nameplate_capacity(self) -> float:
+    def system_capacity(self) -> float:
         """Sum of nameplate capacities for all energy units in a system
 
         Returns:
@@ -54,7 +54,7 @@ class EnergySystem:
         """Return a system comprised of the subset of unit datasets
         corresponding to one (or more) energy unit types.
 
-        For example, get a [sub]system with only the volatile or non-volatile
+        For example, get a [sub]system with only the responsive or non-responsive
         units of a system
 
         Args:
@@ -72,7 +72,7 @@ class EnergySystem:
                 if ut in unit_type
             }
             return EnergySystem(unit_datasets)
-        elif unit_type in VOLATILE_UNIT_TYPES + NONVOLATILE_UNIT_TYPES:
+        elif unit_type in RESPONSIVE_UNIT_TYPES + NONRESPONSIVE_UNIT_TYPES:
             return EnergySystem({unit_type: self._unit_datasets[unit_type]})
 
     def save(self, directory: Path) -> None:
@@ -99,7 +99,7 @@ class EnergySystem:
         # TODO check for existing dataset?
         self._unit_datasets = dict()
 
-        for unit_type in NONVOLATILE_UNIT_TYPES + VOLATILE_UNIT_TYPES:
+        for unit_type in NONRESPONSIVE_UNIT_TYPES + RESPONSIVE_UNIT_TYPES:
             dataset_file = Path(directory, unit_type.__name__ + ".assetra.nc")
 
             if dataset_file.exists():
@@ -165,7 +165,7 @@ class EnergySystemBuilder:
         # check for valid energy unit
         if (
             type(energy_unit)
-            not in NONVOLATILE_UNIT_TYPES + VOLATILE_UNIT_TYPES
+            not in NONRESPONSIVE_UNIT_TYPES + RESPONSIVE_UNIT_TYPES
         ):
             LOG.warning("Invalid type added to energy system builder")
             raise RuntimeWarning()
@@ -203,7 +203,7 @@ class EnergySystemBuilder:
         unit_datasets = dict()
 
         # populate unit datasets
-        for unit_type in NONVOLATILE_UNIT_TYPES + VOLATILE_UNIT_TYPES:
+        for unit_type in NONRESPONSIVE_UNIT_TYPES + RESPONSIVE_UNIT_TYPES:
             # get unit by type
             units = [
                 unit for unit in self.energy_units if type(unit) is unit_type

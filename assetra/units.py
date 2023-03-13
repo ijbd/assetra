@@ -104,7 +104,7 @@ class EnergyUnit(ABC):
 class StaticUnit(EnergyUnit):
     """Derived energy unit class.
 
-    A static energy unit is neither stochastic nor volatile. A single
+    A static energy unit is neither stochastic nor responsive. A single
     hourly capacity profile is used in all probabilistic capacity trials.
     For example, a historical demand profile be fully accounted for in all
     trials of a probabilistic simulation.
@@ -226,7 +226,7 @@ class StochasticUnit(EnergyUnit):
 
     A stochastic energy unit uses time-varying forced outage rates to sample
     indepenedent outages throughout the simulation period. Stochastic units are
-    non-volatile, meaning that while hourly capacity profiles vary between
+    non-responsive, meaning that while hourly capacity profiles vary between
     trials in a probabilistic simulation, the profiles do not depend on system
     conditions and only need to be sampled once
 
@@ -367,7 +367,7 @@ class StochasticUnit(EnergyUnit):
 class StorageUnit(EnergyUnit):
     """Derived energy unit class.
 
-    A storage unit is a state-dependent, volatile energy unit. The available
+    A storage unit is a state-dependent, responsive energy unit. The available
     capacity of a storage unit depends on its state of charge and on the needs
     of the system. As opposed to static and stochastic units, which require
     hourly time series, storage unit operation is characterized by a handful of
@@ -587,9 +587,9 @@ class StorageUnit(EnergyUnit):
 
 
 # for successive simulations (e.g. ELCC), need to differentiate between
-# volatile and non-volatile units.
+# responsive and non-responsive units.
 #
 # these lists also serve to track all "valid" units that can be added
 # to an energy system
-NONVOLATILE_UNIT_TYPES = [StaticUnit, StochasticUnit]
-VOLATILE_UNIT_TYPES = [StorageUnit]
+NONRESPONSIVE_UNIT_TYPES = [DemandUnit, StaticUnit, StochasticUnit]
+RESPONSIVE_UNIT_TYPES = [StorageUnit]
