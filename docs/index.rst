@@ -1,14 +1,12 @@
 .. include:: readme.rst
 
-Contents
---------
-
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
+   :hidden:
 
    installation
    usage
-   modules
+   reference
    contributing
 
 Indices
