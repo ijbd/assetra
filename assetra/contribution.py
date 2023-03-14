@@ -1,4 +1,5 @@
 from logging import getLogger
+from abc import ABC, abstractmethod
 
 from assetra.units import RESPONSIVE_UNIT_TYPES, NONRESPONSIVE_UNIT_TYPES
 from assetra.system import EnergySystem
@@ -9,8 +10,46 @@ MAX_ITERATIONS = 10
 
 LOG = getLogger(__name__)
 
+class ResourceContributionMetric(ABC):
+    """Class responsible for quantifying resource contributions
+    to an energy system
+    
+    Args:
+        energy_system (EnergySystem): Base system to which resources are added
+        simulation (ProbabilisticSimulation): Instantiated simulation object
+            whose parameters (i.e. time range and trial size are used
+            throughout the ELCC calculation)
+        resource_adequacy_metric: Class derived
+            from ResourceAdequacyMetric to use throughout the ELCC simulation
+            (e.g. ExpectedUnservedEnergy, LossOfLoadHours)
+    """
 
-class EffectiveLoadCarryingCapability:
+    def __init__(
+        self,
+        energy_system: EnergySystem,
+        simulation: ProbabilisticSimulation,
+        resource_adequacy_metric: type[ResourceAdequacyMetric]
+    ):
+        self._original_energy_system = energy_system
+        self._simulation = simulation
+        self._resource_adequacy_metric = resource_adequacy_metric
+                 
+    @abstractmethod
+    def evaluate(self, addition: EnergySystem) -> float:
+        """Return resource contribution of addition to the energy system
+        
+        Args:
+            addition (EnergySystem): Energy system to add (possibly a single
+            unit)
+        
+        Returns:
+            float: Quantified resource contribution of addition to the energy
+                system. 
+            """
+
+
+
+class EffectiveLoadCarryingCapability(ResourceContributionMetric):
     """Class responsible for quantifying resource contribution to an energy
     system using the effective load-carrying capability metric:
 
@@ -21,9 +60,9 @@ class EffectiveLoadCarryingCapability:
 
     Args:
         energy_system (EnergySystem) : Base system to which resources are added
-        simulation (ProbabilisticSimulation) : Instantiated simulation objects
+        simulation (ProbabilisticSimulation) : Instantiated simulation object
             whose parameters (i.e. time range and trial size are used
-            throughout the ELCC calculation
+            throughout the ELCC calculation)
         resource_adequacy_metric (type[ResourceAdequacyMetric') : Class derived
             from ResourceAdequacyMetric to use throughout the ELCC simulation
             (e.g. ExpectedUnservedEnergy, LossOfLoadHours)
@@ -65,9 +104,12 @@ class EffectiveLoadCarryingCapability:
         In this way, non-responsive units are only evaluated once while
         responsive units are able to respond to changes in system conditions.
         """
-        self._original_system = energy_system
-        self._simulation = simulation
-        self._resource_adequacy_metric = resource_adequacy_metric
+        ResourceContributionMetric.__init__(
+            self,
+            energy_system,
+            simulation,
+            resource_adequacy_metric
+        )
 
         # decompose system into responsive and non-responsive components
         # non-responsive simulation
@@ -101,7 +143,7 @@ class EffectiveLoadCarryingCapability:
         """Return the ELCC of an addition to the energy system.
 
         Args:
-            addition (EnergySystem): Contributing energy system (possibly a
+            addition (EnergySystem): Energy system to add (possibly a
                 single unit).
             threshold (float, optional): Minimum distance between the original
                 resource adequacy and new resource adequacy to consider equal.
@@ -112,7 +154,7 @@ class EffectiveLoadCarryingCapability:
                 shortfalls
 
         Returns:
-            float: _description_
+            float: Amount of added constant load in units of power.
         """
         if self._original_resource_adequacy == 0:
             LOG.error("Invalid ELCC calculation for system with no shortfalls")

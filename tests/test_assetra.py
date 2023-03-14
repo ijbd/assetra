@@ -31,7 +31,7 @@ def get_sample_net_capacity_matrix(data, start="2016-01-01 00:00"):
 
 
 class TestAssetraUnits(unittest.TestCase):
-    def test_static_unit_list_to_dataset(self):
+    def test_static_list_to_dataset(self):
         """Generate xarray dataset from unit list"""
         from assetra.units import StaticUnit
 
@@ -68,7 +68,7 @@ class TestAssetraUnits(unittest.TestCase):
         observed = StaticUnit.to_unit_dataset(units)
         self.assertTrue(observed.equals(expected))
 
-    def test_static_unit_dataset_to_list(self):
+    def test_static_dataset_to_list(self):
         """Generate unit list from xarray dataset"""
         from assetra.units import StaticUnit
 
@@ -92,7 +92,7 @@ class TestAssetraUnits(unittest.TestCase):
         observed = StaticUnit.to_unit_dataset(units)
         self.assertTrue(observed.equals(expected))
 
-    def test_static_unit_probabilistic_capacity(self):
+    def test_static_probabilistic_capacity(self):
         """Static unit returns hourly capacity"""
         from assetra.units import StaticUnit
 
@@ -114,7 +114,7 @@ class TestAssetraUnits(unittest.TestCase):
         )
         self.assertTrue(expected.equals(observed))
 
-    def test_demand_unit_probabilistic_capacity(self):
+    def test_demand_probabilistic_capacity(self):
         """Demand unit returns negative hourly demand"""
         from assetra.units import DemandUnit
 
@@ -135,7 +135,7 @@ class TestAssetraUnits(unittest.TestCase):
         )
         self.assertTrue(expected.equals(observed))
 
-    def test_stochastic_unit_list_to_dataset(self):
+    def test_stoch_list_to_dataset(self):
         """Generate xarray dataset from unit list"""
         from assetra.units import StochasticUnit
 
@@ -177,7 +177,7 @@ class TestAssetraUnits(unittest.TestCase):
         observed = StochasticUnit.to_unit_dataset(units)
         self.assertTrue(observed.equals(expected))
 
-    def test_stochastic_unit_dataset_to_list(self):
+    def test_stoch_dataset_to_list(self):
         """Generate unit list from xarray dataset"""
         from assetra.units import StochasticUnit
 
@@ -205,7 +205,7 @@ class TestAssetraUnits(unittest.TestCase):
         observed = StochasticUnit.to_unit_dataset(units)
         self.assertTrue(observed.equals(expected))
 
-    def test_stochastic_unit_probabilistic_capacity_for_0(self):
+    def test_stoch_probabilistic_capacity_for_0(self):
         """Stochastic unit with FOR of 0 has full capacity"""
         from assetra.units import StochasticUnit
 
@@ -228,7 +228,7 @@ class TestAssetraUnits(unittest.TestCase):
         )
         self.assertTrue(expected.equals(observed))
 
-    def test_stochastic_unit_probabilistic_capacity_for_1(self):
+    def test_stoch_probabilistic_capacity_for_1(self):
         """Stochastic unit with FOR of 1 has no capacity"""
         from assetra.units import StochasticUnit
 
@@ -251,7 +251,7 @@ class TestAssetraUnits(unittest.TestCase):
         )
         self.assertTrue(expected.equals(observed))
 
-    def test_stochastic_unit_probabilistic_capacity_for_tv(self):
+    def test_stoch_probabilistic_capacity_for_tv(self):
         """Stochastic unit has time-varying FOR"""
         from assetra.units import StochasticUnit
 
@@ -274,7 +274,7 @@ class TestAssetraUnits(unittest.TestCase):
         )
         self.assertTrue(expected.equals(observed))
 
-    def test_storage_unit_list_to_dataset(self):
+    def test_storage_list_to_dataset(self):
         """Generate xarray dataset from unit list"""
         from assetra.units import StorageUnit
 
@@ -314,7 +314,7 @@ class TestAssetraUnits(unittest.TestCase):
         observed = StorageUnit.to_unit_dataset(units)
         self.assertTrue(observed.equals(expected))
 
-    def test_storage_unit_dataset_to_list(self):
+    def test_storage_dataset_to_list(self):
         """Generate unit list from xarray dataset"""
         from assetra.units import StorageUnit
 
@@ -336,7 +336,7 @@ class TestAssetraUnits(unittest.TestCase):
         observed = StorageUnit.to_unit_dataset(units)
         self.assertTrue(observed.equals(expected))
 
-    def test_storage_unit_probabilistic_capacity_discharge_1(self):
+    def test_storage_probabilistic_capacity_over_discharge(self):
         """Storage unit should not discharge more than its current capacity."""
         from assetra.units import StorageUnit
 
@@ -361,7 +361,7 @@ class TestAssetraUnits(unittest.TestCase):
         )
         self.assertTrue(expected.equals(observed))
 
-    def test_storage_unit_probabilistic_capacity_discharge_2(self):
+    def test_storage_probabilistic_capacity_discharge_rate(self):
         """Storage unit should not discharge more than its discharge rate."""
         from assetra.units import StorageUnit
 
@@ -433,6 +433,31 @@ class TestAssetraUnits(unittest.TestCase):
 
         # test
         expected = get_sample_net_capacity_matrix([[1, -1, -1, -1, -1, 0]])
+        observed = StorageUnit.get_probabilistic_capacity_matrix(
+            unit_dataset, net_capacity_matrix
+        )
+        self.assertTrue(expected.equals(observed))
+
+    def test_storage_unit_multi_cycle(self):
+        """Storage unit should operate more than one charge/discharge cycle."""
+        from assetra.units import StorageUnit
+
+        # create unit
+        unit = StorageUnit(
+            id=1,
+            nameplate_capacity=1,
+            charge_rate=1,
+            discharge_rate=1,
+            charge_capacity=1,
+            roundtrip_efficiency=1,
+        )
+        unit_dataset = StorageUnit.to_unit_dataset([unit])
+
+        # create net capacity matrix
+        net_capacity_matrix = get_sample_net_capacity_matrix([[-1, 1, -1, 1]])
+
+        # test
+        expected = get_sample_net_capacity_matrix([[1, -1, 1, -1]])
         observed = StorageUnit.get_probabilistic_capacity_matrix(
             unit_dataset, net_capacity_matrix
         )
@@ -1163,6 +1188,30 @@ class TestAssetraMetrics(unittest.TestCase):
         observed = ra.evaluate()
         self.assertEqual(expected, observed)
 
+    def test_lolh_fractional(self):
+        """Definition of LOLH (fraction)"""
+        from assetra.system import EnergySystem
+        from assetra.simulation import ProbabilisticSimulation
+        from assetra.metrics import LossOfLoadHours
+
+        e = EnergySystem()
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00",
+            end_hour="2016-01-01 01:00",
+            trial_size=2,
+        )
+        ps.assign_energy_system(e)
+
+        ps.run(get_sample_net_capacity_matrix([[-1, 0], [0, 0]]))
+
+        # create adequacy model
+        ra = LossOfLoadHours(ps)
+
+        # test
+        expected = 0.5
+        observed = ra.evaluate()
+        self.assertEqual(expected, observed)
+
 
 class TestAssetraContribution(unittest.TestCase):
     def test_elcc_ideal_generator(self):
@@ -1251,7 +1300,7 @@ class TestAssetraContribution(unittest.TestCase):
         observed = rc.evaluate(e2)
         self.assertAlmostEqual(expected, observed, 2)
 
-    def test_elcc_vol_addition(self):
+    def test_elcc_resp_addition(self):
         """ELCC should dispatch added responsive resources."""
         from assetra.units import StaticUnit, StorageUnit
         from assetra.system import EnergySystemBuilder
@@ -1297,8 +1346,8 @@ class TestAssetraContribution(unittest.TestCase):
         observed = rc.evaluate(e2)
         self.assertAlmostEqual(expected, observed, 2)
 
-    def test_elcc_vol_system(self):
-        """ELCC should redispatch existing storage"""
+    def test_elcc_resp_system(self):
+        """ELCC should redispatch original responsive fleet."""
         from assetra.units import StaticUnit, StorageUnit
         from assetra.system import EnergySystemBuilder
         from assetra.simulation import ProbabilisticSimulation
