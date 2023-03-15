@@ -112,31 +112,7 @@ class EnergySystem:
 
 
 class EnergySystemBuilder:
-    """Class responsible for managing energy units and building energy systems.
-
-    Internally, we *try* to think of energy systems as immutable. There is no
-    way to directly add, remove, or modify energy units to/from/in an  system.
-    The reason for this is to make explicitly clear to users that higher level
-    objects do not track the state of lower-level objects. For example, if a
-    user wants to modify a system for which a probabilistic simulation has
-    already been evaluated, it would be tedious to both recognize the system
-    modification from the simulation object and preserve computation from
-    the existing evaluation.
-
-    Further, we want to make efficient use of data structures for larger
-    simulations. For example, it is both time- and memory- efficient to operate
-    on whole fleets of energy units via matrix operation rather than evaluating
-    each unit individually. This also offers a pathway to future
-    parallelization.
-
-    On the other hand, it is important for users to modify systems, i.e. add or
-    remove units at will, and it is convenient to think of energy units as
-    individual conceptual objects (not as fleets).
-
-    To summarize, the internal energy system model should be immutable and
-    operate on fleets of energy units, while the external model should be
-    modifiable and treat energy units as individual objects. The
-    EnergySystemBuilder class acts as a bridge between these two models
+    """Class responsible for managing energy units and building energy systems
     """
 
     def __init__(self):

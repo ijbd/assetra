@@ -10,7 +10,7 @@ ASSETRA
         :alt: Documentation Status
 
 
-The ASSET Lab Resource adequacy package (assetra) is an open-source energy system resource adequacy package maintained by the University of Michigan ASSET Lab.
+The ASSET Lab Resource adequacy package (assetra) is a light-weight, open-source energy system resource adequacy package maintained by the University of Michigan ASSET Lab.
 
 
 * Free software: MIT license
@@ -19,12 +19,26 @@ The ASSET Lab Resource adequacy package (assetra) is an open-source energy syste
 
 Features
 --------
+* Probabilistic Monte Carlo state-sampling simulation framework, supporting:
+        * Time-varying forced outage rates in thermal units
+        * Sequential storage unit dispatch
+        * User-defined energy unit types
+* Resource adequacy calculation:
+        * Expected unserved energy (EUE)
+        * Loss of load hours (LOLH)
+        * Loss of load days (LOLD)
+* Resource contribution calculation:
+        * Effective load-carrying capability (ELCC)
+* Object-oriented interface to manage energy units within energy systems
+* Internal computation stored in `xarray <https://docs.xarray.dev/en/stable/index.html>`_ datasets
 
-* TODO
+Future Work
+-----------
+* Regional interchange and transmission
+* Parallelized computation
 
 Credits
 -------
-
 This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
 
 .. _Cookiecutter: https://github.com/audreyr/cookiecutter
