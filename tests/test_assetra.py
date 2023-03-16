@@ -1563,7 +1563,6 @@ class TestAssetraMetrics(unittest.TestCase):
         observed = ra.evaluate()
         self.assertEqual(expected, observed)
 
-
 class TestAssetraContribution(unittest.TestCase):
     def test_elcc_ideal_generator(self):
         """ELCC of ideal generator is 1."""

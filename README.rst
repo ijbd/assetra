@@ -27,6 +27,7 @@ Features
         * Expected unserved energy (EUE)
         * Loss of load hours (LOLH)
         * Loss of load days (LOLD)
+        * Loss of load frequency (LOLF)
 * Resource contribution calculation:
         * Effective load-carrying capability (ELCC)
 * Object-oriented interface to manage energy units within energy systems
