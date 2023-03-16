@@ -27,8 +27,10 @@ class EnergySystem:
         self._unit_datasets = unit_datasets
 
         # check input
-        for key in unit_datasets:
-            if key not in (RESPONSIVE_UNIT_TYPES + NONRESPONSIVE_UNIT_TYPES):
+        for unit_type in unit_datasets:
+            if unit_type not in (
+                RESPONSIVE_UNIT_TYPES + NONRESPONSIVE_UNIT_TYPES
+            ):
                 LOG.error(
                     "Constructing energy system with invalid unit dataset"
                 )

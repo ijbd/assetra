@@ -159,16 +159,14 @@ class ProbabilisticSimulation:
         )
 
         # iterate through unit datasets
-        for (
-            unit_type,
-            unit_dataset,
-        ) in self._energy_system.unit_datasets.items():
-            self._hourly_capacity_matrix.loc[
-                unit_type
-            ] = unit_type.get_probabilistic_capacity_matrix(
-                unit_dataset,
-                self._net_hourly_capacity_matrix,
-            ).values
-            self._net_hourly_capacity_matrix += (
-                self._hourly_capacity_matrix.sel(unit_type=unit_type).values
-            )
+        for unit_type in unit_types:
+            if unit_type in self._energy_system.unit_datasets:
+                self._hourly_capacity_matrix.loc[
+                    unit_type
+                ] = unit_type.get_probabilistic_capacity_matrix(
+                    self._energy_system.unit_datasets[unit_type],
+                    self._net_hourly_capacity_matrix,
+                ).values
+                self._net_hourly_capacity_matrix += (
+                    self._hourly_capacity_matrix.sel(unit_type=unit_type).values
+                )
