@@ -1537,7 +1537,31 @@ class TestAssetraMetrics(unittest.TestCase):
         self.assertEqual(expected, observed)
 
     def test_lolf_fractional(self):
-        pass
+        """LOLF is averaged across trials"""
+        from assetra.system import EnergySystem
+        from assetra.simulation import ProbabilisticSimulation
+        from assetra.metrics import LossOfLoadFrequency
+
+        e = EnergySystem()
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00",
+            end_hour="2016-01-01 4:00",
+            trial_size=2,
+        )
+        ps.assign_energy_system(e)
+        ps.run(
+            get_sample_net_capacity_matrix(
+                [[-1, 0, -1, 0, -1], [0, -1, -1, -1, 0]]
+            )
+        )
+
+        # create adequacy model
+        ra = LossOfLoadFrequency(ps)
+
+        # test
+        expected = 2
+        observed = ra.evaluate()
+        self.assertEqual(expected, observed)
 
 
 class TestAssetraContribution(unittest.TestCase):
