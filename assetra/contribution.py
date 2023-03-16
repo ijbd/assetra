@@ -10,10 +10,11 @@ MAX_ITERATIONS = 10
 
 LOG = getLogger(__name__)
 
+
 class ResourceContributionMetric(ABC):
     """Class responsible for quantifying resource contributions
     to an energy system
-    
+
     Args:
         energy_system (EnergySystem): Base system to which resources are added
         simulation (ProbabilisticSimulation): Instantiated simulation object
@@ -28,25 +29,24 @@ class ResourceContributionMetric(ABC):
         self,
         energy_system: EnergySystem,
         simulation: ProbabilisticSimulation,
-        resource_adequacy_metric: type[ResourceAdequacyMetric]
+        resource_adequacy_metric: type[ResourceAdequacyMetric],
     ):
         self._original_energy_system = energy_system
         self._simulation = simulation
         self._resource_adequacy_metric = resource_adequacy_metric
-                 
+
     @abstractmethod
     def evaluate(self, addition: EnergySystem) -> float:
         """Return resource contribution of addition to the energy system
-        
+
         Args:
             addition (EnergySystem): Energy system to add (possibly a single
             unit)
-        
+
         Returns:
             float: Quantified resource contribution of addition to the energy
-                system. 
-            """
-
+                system.
+        """
 
 
 class EffectiveLoadCarryingCapability(ResourceContributionMetric):
@@ -105,10 +105,7 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
         responsive units are able to respond to changes in system conditions.
         """
         ResourceContributionMetric.__init__(
-            self,
-            energy_system,
-            simulation,
-            resource_adequacy_metric
+            self, energy_system, simulation, resource_adequacy_metric
         )
 
         # decompose system into responsive and non-responsive components

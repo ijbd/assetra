@@ -112,8 +112,7 @@ class EnergySystem:
 
 
 class EnergySystemBuilder:
-    """Class responsible for managing energy units and building energy systems
-    """
+    """Class responsible for managing energy units and building energy systems"""
 
     def __init__(self):
         self._energy_units = []

@@ -1212,6 +1212,333 @@ class TestAssetraMetrics(unittest.TestCase):
         observed = ra.evaluate()
         self.assertEqual(expected, observed)
 
+    def test_lold_single_event(self):
+        """LOLD should be 1 for a single event in one day"""
+        from assetra.units import StaticUnit
+        from assetra.system import EnergySystemBuilder
+        from assetra.simulation import ProbabilisticSimulation
+        from assetra.metrics import LossOfLoadDays
+
+        b = EnergySystemBuilder()
+        b.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([-1] + [0] * 23),
+            )
+        )
+        e = b.build()
+
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00",
+            end_hour="2016-01-01 23:00",
+            trial_size=1,
+        )
+        ps.assign_energy_system(e)
+
+        # create adequacy model
+        ra = LossOfLoadDays(ps)
+
+        # test
+        expected = 1
+        observed = ra.evaluate()
+        self.assertEqual(expected, observed)
+
+    def test_lold_single_event(self):
+        """LOLD does not characterize magnitude of events"""
+        from assetra.units import StaticUnit
+        from assetra.system import EnergySystemBuilder
+        from assetra.simulation import ProbabilisticSimulation
+        from assetra.metrics import LossOfLoadDays
+
+        b = EnergySystemBuilder()
+        b.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([-2] + [0] * 23),
+            )
+        )
+        e = b.build()
+
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00",
+            end_hour="2016-01-01 23:00",
+            trial_size=1,
+        )
+        ps.assign_energy_system(e)
+
+        # create adequacy model
+        ra = LossOfLoadDays(ps)
+
+        # test
+        expected = 1
+        observed = ra.evaluate()
+        self.assertEqual(expected, observed)
+
+    def test_lold_single_day_multi_event(self):
+        """LOLD should be 1 for multiple events in one day"""
+        from assetra.units import StaticUnit
+        from assetra.system import EnergySystemBuilder
+        from assetra.simulation import ProbabilisticSimulation
+        from assetra.metrics import LossOfLoadDays
+
+        b = EnergySystemBuilder()
+        b.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([-1] * 2 + [0] * 22),
+            )
+        )
+        e = b.build()
+
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00",
+            end_hour="2016-01-01 23:00",
+            trial_size=1,
+        )
+        ps.assign_energy_system(e)
+
+        # create adequacy model
+        ra = LossOfLoadDays(ps)
+
+        # test
+        expected = 1
+        observed = ra.evaluate()
+        self.assertEqual(expected, observed)
+
+    def test_lold_multi_day_multi_event(self):
+        """LOLD should be 2 for multiple events in two days"""
+        from assetra.units import StaticUnit
+        from assetra.system import EnergySystemBuilder
+        from assetra.simulation import ProbabilisticSimulation
+        from assetra.metrics import LossOfLoadDays
+
+        b = EnergySystemBuilder()
+        b.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series(
+                    [0] * 22 + [-1] * 4 + [0] * 22
+                ),
+            )
+        )
+        e = b.build()
+
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00",
+            end_hour="2016-01-02 23:00",
+            trial_size=1,
+        )
+        ps.assign_energy_system(e)
+
+        # create adequacy model
+        ra = LossOfLoadDays(ps)
+
+        # test
+        expected = 2
+        observed = ra.evaluate()
+        self.assertEqual(expected, observed)
+
+    def test_lold_fractional(self):
+        """Definition of LOLD (fraction)"""
+        from assetra.system import EnergySystem
+        from assetra.simulation import ProbabilisticSimulation
+        from assetra.metrics import LossOfLoadDays
+
+        e = EnergySystem()
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00",
+            end_hour="2016-01-03 23:00",
+            trial_size=2,
+        )
+        ps.assign_energy_system(e)
+
+        net_hourly_capacity_matrix = get_sample_net_capacity_matrix(
+            [[0] * 24 * 3] * 2
+        )
+        # first trial lold = 2
+        net_hourly_capacity_matrix[0, 23:25] = -1
+        # second trial lold = 1
+        net_hourly_capacity_matrix[1, 24 * 2] = -1
+        ps.run(net_hourly_capacity_matrix)
+
+        # create adequacy model
+        ra = LossOfLoadDays(ps)
+
+        # test
+        expected = 1.5
+        observed = ra.evaluate()
+        self.assertEqual(expected, observed)
+
+    def test_lolf_single_hour_single_event(self):
+        """Definition of LOLF"""
+        from assetra.units import StaticUnit
+        from assetra.system import EnergySystemBuilder
+        from assetra.simulation import ProbabilisticSimulation
+        from assetra.metrics import LossOfLoadFrequency
+
+        b = EnergySystemBuilder()
+        b.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([-1, 0]),
+            )
+        )
+        e = b.build()
+
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00",
+            end_hour="2016-01-01 01:00",
+            trial_size=1,
+        )
+        ps.assign_energy_system(e)
+
+        # create adequacy model
+        ra = LossOfLoadFrequency(ps)
+
+        # test
+        expected = 1
+        observed = ra.evaluate()
+        self.assertEqual(expected, observed)
+
+    def test_lolf_magnitude(self):
+        """Definition of LOLF"""
+        from assetra.units import StaticUnit
+        from assetra.system import EnergySystemBuilder
+        from assetra.simulation import ProbabilisticSimulation
+        from assetra.metrics import LossOfLoadFrequency
+
+        b = EnergySystemBuilder()
+        b.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([-2, 0]),
+            )
+        )
+        e = b.build()
+
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00",
+            end_hour="2016-01-01 01:00",
+            trial_size=1,
+        )
+        ps.assign_energy_system(e)
+
+        # create adequacy model
+        ra = LossOfLoadFrequency(ps)
+
+        # test
+        expected = 1
+        observed = ra.evaluate()
+        self.assertEqual(expected, observed)
+
+    def test_lolf_single_hour_multi_event(self):
+        """LOLF captures multiple non-contiguous single-hour events"""
+        """Definition of LOLF"""
+        from assetra.units import StaticUnit
+        from assetra.system import EnergySystemBuilder
+        from assetra.simulation import ProbabilisticSimulation
+        from assetra.metrics import LossOfLoadFrequency
+
+        b = EnergySystemBuilder()
+        b.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([-1, 0, -1]),
+            )
+        )
+        e = b.build()
+
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00",
+            end_hour="2016-01-01 02:00",
+            trial_size=1,
+        )
+        ps.assign_energy_system(e)
+
+        # create adequacy model
+        ra = LossOfLoadFrequency(ps)
+
+        # test
+        expected = 2
+        observed = ra.evaluate()
+        self.assertEqual(expected, observed)
+
+    def test_lolf_multi_hour_single_event(self):
+        """LOLF captures non-contiguous multi-hour events"""
+        """Definition of LOLF"""
+        from assetra.units import StaticUnit
+        from assetra.system import EnergySystemBuilder
+        from assetra.simulation import ProbabilisticSimulation
+        from assetra.metrics import LossOfLoadFrequency
+
+        b = EnergySystemBuilder()
+        b.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([-1, -1]),
+            )
+        )
+        e = b.build()
+
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00",
+            end_hour="2016-01-01 01:00",
+            trial_size=1,
+        )
+        ps.assign_energy_system(e)
+
+        # create adequacy model
+        ra = LossOfLoadFrequency(ps)
+
+        # test
+        expected = 1
+        observed = ra.evaluate()
+        self.assertEqual(expected, observed)
+
+    def test_lolf_multi_hour_multi_event(self):
+        """LOLF captures multiple non-contiguous multi-hour events"""
+        """Definition of LOLF"""
+        from assetra.units import StaticUnit
+        from assetra.system import EnergySystemBuilder
+        from assetra.simulation import ProbabilisticSimulation
+        from assetra.metrics import LossOfLoadFrequency
+
+        b = EnergySystemBuilder()
+        b.add_unit(
+            StaticUnit(
+                id=1,
+                nameplate_capacity=1,
+                hourly_capacity=get_sample_time_series([-1, 0, -1, -1]),
+            )
+        )
+        e = b.build()
+
+        ps = ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00",
+            end_hour="2016-01-01 03:00",
+            trial_size=1,
+        )
+        ps.assign_energy_system(e)
+
+        # create adequacy model
+        ra = LossOfLoadFrequency(ps)
+
+        # test
+        expected = 2
+        observed = ra.evaluate()
+        self.assertEqual(expected, observed)
+
+    def test_lolf_fractional(self):
+        pass
+
 
 class TestAssetraContribution(unittest.TestCase):
     def test_elcc_ideal_generator(self):
