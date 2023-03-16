@@ -111,7 +111,7 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
         # decompose system into responsive and non-responsive components
         # non-responsive simulation
         self._original_system_non_responsive = (
-            self._original_system.get_system_by_type(NONRESPONSIVE_UNIT_TYPES)
+            self._original_energy_system.get_system_by_type(NONRESPONSIVE_UNIT_TYPES)
         )
         self._original_non_responsive_simulation = self._simulation.copy()
         self._original_non_responsive_simulation.assign_energy_system(
@@ -120,7 +120,7 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
 
         # responsive simulation
         self._original_system_responsive = (
-            self._original_system.get_system_by_type(RESPONSIVE_UNIT_TYPES)
+            self._original_energy_system.get_system_by_type(RESPONSIVE_UNIT_TYPES)
         )
         self._original_responsive_simulation = self._simulation.copy()
         self._original_responsive_simulation.assign_energy_system(
