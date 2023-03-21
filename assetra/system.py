@@ -82,16 +82,16 @@ class EnergySystem:
         elif unit_type in RESPONSIVE_UNIT_TYPES + NONRESPONSIVE_UNIT_TYPES:
             return EnergySystem({unit_type: self._unit_datasets[unit_type]})
 
-    def save(self, directory: Path) -> None:
+    def save(self, directory: Path, overwrite=False) -> None:
         """Save energy system to a directory. Unit datasets are saved as netcdf
         files
 
         Args:
             directory (Path): Path to which energy system is saved. This path
                 should either be empty or not exist yet.
+            overwrite (bool, optional): _description_. Defaults to False.
         """
-        # TODO check for non-empty directory
-        # TODO create directory
+        directory.mkdir(parents=True, exist_ok=overwrite)
         for unit_type, dataset in self._unit_datasets.items():
             dataset_file = Path(directory, unit_type.__name__ + ".assetra.nc")
             dataset.to_netcdf(dataset_file)
