@@ -44,7 +44,7 @@ class EnergySystem:
             float : Total nameplate capacity of a system
         """
         return sum(
-            d["nameplate_capacity"].sum() for d in self._unit_datasets.values()
+            float(d["nameplate_capacity"].sum()) for d in self._unit_datasets.values()
         )
 
     @property
