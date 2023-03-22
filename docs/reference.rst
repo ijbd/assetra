@@ -48,7 +48,7 @@ The assetra model is built on a number of principles and assumptions outlined be
 **Stochastic Units**
  - Stochastic units are instantiated with hourly capacity profiles and hourly forced outage rates.
  - Stochastic unit outages are sampled independently in each hour.
- - Stochastic units contribute zero capacity in hours where outages are sampled, otherwise they contribute their full hourly capacity.
+ - Stochastic units contribute zero capacity in hours where outages occur, otherwise they contribute their full hourly capacity.
 
 **Storage Units**
  - Storage units are dispatched with a greedy policy to minimize expected unserved energy. When net capacity exceeds demand, storage units charge. When system demand exceeds capacity, storage units discharge.
