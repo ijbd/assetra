@@ -633,7 +633,6 @@ class TestAssetraSystem(unittest.TestCase):
 
         # setup directory
         save_dir = pathlib.Path("tmp-sys")
-        save_dir.mkdir()
         try:
             b = EnergySystemBuilder()
             b.add_unit(
