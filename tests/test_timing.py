@@ -5,8 +5,13 @@ import timeit
 sys.path.append("..")
 
 # internal
-from assetra.core import EnergySystemBuilder, StaticUnit, StochasticUnit, StorageUnit
-from assetra.probabilistic_analysis import ProbabilisticSimulation
+from assetra.units import (
+    StaticUnit,
+    StochasticUnit,
+    StorageUnit,
+)
+from assetra.system import EnergySystemBuilder
+from assetra.simulation import ProbabilisticSimulation
 
 # external
 import xarray as xr
@@ -36,7 +41,9 @@ def setup(
                     data=np.ones(num_hours),
                     coords=dict(
                         time=xr.date_range(
-                            start="2016-01-01 00:00:00", periods=num_hours, freq="1H"
+                            start="2016-01-01 00:00:00",
+                            periods=num_hours,
+                            freq="1H",
                         )
                     ),
                 ),
@@ -53,7 +60,9 @@ def setup(
                     data=np.ones(num_hours),
                     coords=dict(
                         time=xr.date_range(
-                            start="2016-01-01 00:00:00", periods=num_hours, freq="1H"
+                            start="2016-01-01 00:00:00",
+                            periods=num_hours,
+                            freq="1H",
                         )
                     ),
                 ),
@@ -61,7 +70,9 @@ def setup(
                     data=np.ones(num_hours) * 0.5,
                     coords=dict(
                         time=xr.date_range(
-                            start="2016-01-01 00:00:00", periods=num_hours, freq="1H"
+                            start="2016-01-01 00:00:00",
+                            periods=num_hours,
+                            freq="1H",
                         )
                     ),
                 ),
@@ -121,7 +132,9 @@ def test_assetra_timing(
 
     print(
         "run:",
-        timeit.timeit(f"run({num_trials}, {num_hours})", number=n, globals=globals())
+        timeit.timeit(
+            f"run({num_trials}, {num_hours})", number=n, globals=globals()
+        )
         / n,
     )
 

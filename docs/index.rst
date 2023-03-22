@@ -1,20 +1,16 @@
-Welcome to the ASSET Lab Resource Adequacy Package's documentation!
-======================================
+.. include:: readme.rst
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 4
+   :hidden:
 
-   readme
    installation
    usage
-   modules
+   reference
    contributing
-   authors
-   history
 
-Indices and tables
-==================
+Indices
+-------
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`

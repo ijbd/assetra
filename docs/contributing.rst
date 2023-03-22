@@ -1,6 +1,6 @@
-=====
+==========
 Contribute
-=====
+==========
 
 Please feel free contribute to the ASSET Lab Resource Adequacy Package.
 

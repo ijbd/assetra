@@ -50,3 +50,5 @@ target/
 
 # others
 data
+ignore
+examples/01_california/sample_data/sample_energy_sys
