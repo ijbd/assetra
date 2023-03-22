@@ -36,9 +36,8 @@ Several of the core types in the assetra model are defined as abstract base clas
 
    Figure 2: Derived types used in the assetra model.
 
-Model Details
+Assumptions
 -----------------
-The assetra model is built on a number of principles and assumptions outlined below:
 
 **Static Units**
  - Static units are instantiated with hourly capacity profiles.
