@@ -6,6 +6,8 @@ from assetra.system import EnergySystem
 from assetra.simulation import ProbabilisticSimulation
 from assetra.metrics import ResourceAdequacyMetric
 
+import xarray as xr
+
 MAX_ITERATIONS = 10
 
 LOG = getLogger(__name__)
@@ -136,10 +138,31 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
         self._original_responsive_simulation.run(
             self._original_non_responsive_simulation.net_hourly_capacity_matrix
         )
-        self._original_resource_adequacy = self._resource_adequacy_metric(
+        self._resource_adequacy_model = self._resource_adequacy_metric(
             self._original_responsive_simulation
-        ).evaluate()
+        )
+        self._original_resource_adequacy = self._resource_adequacy_model.evaluate()
 
+        # save intermediate steps
+        self._original_net_capacity_matrix = self._original_responsive_simulation.net_hourly_capacity_matrix
+        self._intermediate_net_capacity_matrices = []
+
+    @property
+    def original_net_capacity_matrix(self) -> xr.DataArray:
+        """Return the net hourly capacity matrix of the base system"""
+        # TODO test
+        return self._original_net_capacity_matrix
+     
+    @property
+    def intermediate_net_capacity_matrices(self) -> tuple[tuple[float, xr.DataArray]]:
+        """Return intermediate net capacity matrices for each step of the ELCC
+        calculation. Each element is a tuple composed of the amount of added 
+        constant load and the net hourly capacity matrix corresponding to that
+        step.
+        """
+        # TODO test
+        return (m for m in self._intermediate_net_capacity_matrices)
+    
     def evaluate(self, addition: EnergySystem, threshold=0.001) -> float:
         """Return the ELCC of an addition to the energy system.
 
@@ -160,6 +183,9 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
         if self._original_resource_adequacy == 0:
             LOG.error("Invalid ELCC calculation for system with no shortfalls")
             raise RuntimeWarning()
+        
+        # reset intermediate net capacities
+        self._intermediate_net_capacity_matrices = []
 
         # decompose system into responsive and non-responsive components
         # non-responsive simulation
@@ -199,18 +225,21 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
         )
 
         # run chained responsive simulation
-        self._original_responsive_simulation.run(
+        additional_responsive_simulation.run(
             non_responsive_net_hourly_capacity_matrix - additional_demand
         )
-        additional_responsive_simulation.run(
-            self._original_responsive_simulation.net_hourly_capacity_matrix
+        self._original_responsive_simulation.run(
+            additional_responsive_simulation.net_hourly_capacity_matrix
+        )
+        self._intermediate_net_capacity_matrices.append(
+            (
+                additional_demand, 
+                self._original_responsive_simulation.net_hourly_capacity_matrix
+            )
         )
 
         # update resource adequacy
-        new_resource_adequacy_model = self._resource_adequacy_metric(
-            additional_responsive_simulation
-        )
-        new_resource_adequacy = new_resource_adequacy_model.evaluate()
+        new_resource_adequacy = self._resource_adequacy_model.evaluate()
         diff = abs(new_resource_adequacy - self._original_resource_adequacy)
 
         # iterate until convergence
@@ -246,15 +275,21 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
                 )
 
             # run chained responsive simulation
-            self._original_responsive_simulation.run(
+            additional_responsive_simulation.run(
                 non_responsive_net_hourly_capacity_matrix - additional_demand
             )
-            additional_responsive_simulation.run(
+            self._original_responsive_simulation.run(
+                additional_responsive_simulation.net_hourly_capacity_matrix
+            )
+            self._intermediate_net_capacity_matrices.append(
+                (
+                additional_demand, 
                 self._original_responsive_simulation.net_hourly_capacity_matrix
+                )
             )
 
             # update resource adequacy
-            new_resource_adequacy = new_resource_adequacy_model.evaluate()
+            new_resource_adequacy = self._resource_adequacy_model.evaluate()
             diff = abs(new_resource_adequacy - self._original_resource_adequacy)
 
             # update iteration count
