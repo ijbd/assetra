@@ -350,13 +350,15 @@ class StochasticUnit(EnergyUnit):
         # Initialize the probabilistic capacity matrix
         probabilistic_capacity_matrix = xr.zeros_like(net_hourly_capacity_matrix)
 
-        # Loop over the energy_unit dimension in chunks and calculate the probabilistic capacity matrix for each chunk
+        # TODO replace loop w DASK
+        # Loop over the energy unit dimension in chunks
         for unit_idx in range(0, unit_dataset.sizes["energy_unit"], chunk_size):
             unit_idx_end = min(unit_idx+chunk_size, unit_dataset.sizes["energy_unit"])
 
-            LOG.debug(
-                "Sampling outages for units " + str(unit_idx) + "-" + str(unit_idx_end)
-                + " of " + str(unit_dataset.sizes["energy_unit"])
+            LOG.info(
+                "Sampling outages for units " + str(unit_idx+1) + "-" 
+                + str(unit_idx_end) + " of " 
+                + str(unit_dataset.sizes["energy_unit"])
             )
 
             chunk = unit_dataset.isel(energy_unit=slice(unit_idx, unit_idx_end))
@@ -590,7 +592,12 @@ class StorageUnit(EnergyUnit):
         units = StorageUnit.from_unit_dataset(unit_dataset)
 
         net_adj_hourly_capacity_matrix = net_hourly_capacity_matrix.copy()
-        for unit in units:
+        for idx, unit in enumerate(units):
+            # print update
+            LOG.info(
+                "Dispatching storage unit " + str(idx) + " of "
+                + str(len(units)) + " in all hours"
+            )
             for trial in net_adj_hourly_capacity_matrix:
                 trial += StorageUnit._get_hourly_capacity(
                     unit.charge_rate,

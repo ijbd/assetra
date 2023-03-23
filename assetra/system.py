@@ -37,11 +37,18 @@ class EnergySystem:
                 raise RuntimeWarning
 
     @property
-    def system_capacity(self) -> float:
-        """Sum of nameplate capacities for all energy units in a system
+    def size(self) -> float:
+        """
+        Total number of units in system
+        """
+        return sum(
+            d.sizes["energy_unit"] for d in self._unit_datasets.values()
+        )
 
-        Returns:
-            float : Total nameplate capacity of a system
+    @property
+    def system_capacity(self) -> float:
+        """
+        Total nameplate capacity of a system
         """
         return sum(
             float(d["nameplate_capacity"].sum()) for d in self._unit_datasets.values()
@@ -49,11 +56,8 @@ class EnergySystem:
 
     @property
     def unit_datasets(self) -> dict[type : xr.Dataset]:
-        """Access underlying unit_datasets. This is not a deep copy.
-
-        Returns:
-            dict[type : xr.Dataset] : Mapping from derived energy
-                unit type to its associated unit dataset
+        """
+        Mapping from derived energy unit type to unit dataset
         """
         return self._unit_datasets
 
@@ -122,16 +126,15 @@ class EnergySystemBuilder:
     @property
     def energy_units(self) -> tuple[EnergyUnit]:
         """
-        Returns:
-            tuple[EnergyUnit]: Energy units added to builder object.
+        Energy units added to builder object
         """
         return tuple(self._energy_units)
 
     @property
     def size(self) -> int:
         """
-        Returns:
-            int: Number of energy units added to builder object."""
+        Number of energy units added to builder object
+        """
         return len(self._energy_units)
 
     def add_unit(self, energy_unit: EnergyUnit) -> None:

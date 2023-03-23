@@ -23,7 +23,7 @@ class ProbabilisticSimulation:
         end_hour (datetime) : Ending simulation hour (inclusive).
         trial_size (int) : Number of simulation Monte Carlo trials.
     """
-
+    # TODO save probabilistic simulation
     def __init__(
         self, start_hour: datetime, end_hour: datetime, trial_size: int
     ):
