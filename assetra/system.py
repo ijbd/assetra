@@ -43,9 +43,7 @@ class EnergySystem:
         """
         Total number of units in system
         """
-        return sum(
-            d.sizes["energy_unit"] for d in self._unit_datasets.values()
-        )
+        return sum(d.sizes["energy_unit"] for d in self._unit_datasets.values())
 
     @property
     def system_capacity(self) -> float:
@@ -53,7 +51,8 @@ class EnergySystem:
         Total nameplate capacity of a system
         """
         return sum(
-            float(d["nameplate_capacity"].sum()) for d in self._unit_datasets.values()
+            float(d["nameplate_capacity"].sum())
+            for d in self._unit_datasets.values()
         )
 
     @property
@@ -113,9 +112,9 @@ class EnergySystem:
             raise FileNotFoundError(
                 errno.ENOENT,
                 os.strerror(errno.ENOENT),
-                str(directory.resolve())
+                str(directory.resolve()),
             )
-        
+
         self._unit_datasets = dict()
 
         for unit_type in NONRESPONSIVE_UNIT_TYPES + RESPONSIVE_UNIT_TYPES:

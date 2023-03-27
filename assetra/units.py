@@ -10,7 +10,8 @@ import xarray as xr
 LOG = getLogger(__name__)
 
 # ENERGY UNIT(S)
-MAX_CHUNK_SIZE = int(1E8)
+MAX_CHUNK_SIZE = int(1e8)
+
 
 @dataclass(frozen=True)
 class EnergyUnit(ABC):
@@ -343,38 +344,46 @@ class StochasticUnit(EnergyUnit):
         unit_dataset = unit_dataset.sel(time=net_hourly_capacity_matrix.time)
 
         chunk_size = 1 + MAX_CHUNK_SIZE // (
-            net_hourly_capacity_matrix.sizes["trial"] * net_hourly_capacity_matrix.sizes["time"]
+            net_hourly_capacity_matrix.sizes["trial"]
+            * net_hourly_capacity_matrix.sizes["time"]
         )
-        LOG.info("Using chunk size "+str(chunk_size))
+        LOG.info("Using chunk size " + str(chunk_size))
 
         # Initialize the probabilistic capacity matrix
-        probabilistic_capacity_matrix = xr.zeros_like(net_hourly_capacity_matrix)
+        probabilistic_capacity_matrix = xr.zeros_like(
+            net_hourly_capacity_matrix
+        )
 
         # TODO replace loop w DASK
         # Loop over the energy unit dimension in chunks
         for unit_idx in range(0, unit_dataset.sizes["energy_unit"], chunk_size):
-            unit_idx_end = min(unit_idx+chunk_size, unit_dataset.sizes["energy_unit"])
+            unit_idx_end = min(
+                unit_idx + chunk_size, unit_dataset.sizes["energy_unit"]
+            )
 
             LOG.info(
-                "Sampling outages for units " + str(unit_idx+1) + "-" 
-                + str(unit_idx_end) + " of " 
+                "Sampling outages for units "
+                + str(unit_idx + 1)
+                + "-"
+                + str(unit_idx_end)
+                + " of "
                 + str(unit_dataset.sizes["energy_unit"])
             )
 
             chunk = unit_dataset.isel(energy_unit=slice(unit_idx, unit_idx_end))
 
             chunk_prob_matrix = np.where(
-                    np.random.random_sample(
-                        (
-                            net_hourly_capacity_matrix.sizes["trial"],
-                            chunk.sizes["energy_unit"],
-                            net_hourly_capacity_matrix.sizes["time"],
-                        )
+                np.random.random_sample(
+                    (
+                        net_hourly_capacity_matrix.sizes["trial"],
+                        chunk.sizes["energy_unit"],
+                        net_hourly_capacity_matrix.sizes["time"],
                     )
-                    > chunk["hourly_forced_outage_rate"].values,
-                    chunk["hourly_capacity"].values,
-                    0
-                ).sum(axis=1)
+                )
+                > chunk["hourly_forced_outage_rate"].values,
+                chunk["hourly_capacity"].values,
+                0,
+            ).sum(axis=1)
 
             # Update the main probabilistic capacity matrix with the results from the chunk
             probabilistic_capacity_matrix += chunk_prob_matrix
@@ -595,8 +604,11 @@ class StorageUnit(EnergyUnit):
         for idx, unit in enumerate(units):
             # print update
             LOG.info(
-                "Dispatching storage unit " + str(idx) + " of "
-                + str(len(units)) + " in all hours"
+                "Dispatching storage unit "
+                + str(idx)
+                + " of "
+                + str(len(units))
+                + " in all hours"
             )
             for trial in net_adj_hourly_capacity_matrix:
                 trial += StorageUnit._get_hourly_capacity(

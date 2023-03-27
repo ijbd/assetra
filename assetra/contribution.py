@@ -139,15 +139,22 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
         self._resource_adequacy_model = self._resource_adequacy_metric(
             self._original_responsive_simulation
         )
-        self._original_resource_adequacy = self._resource_adequacy_model.evaluate()
-        LOG.info("Original resource adequacy: " + str(self._original_resource_adequacy))
+        self._original_resource_adequacy = (
+            self._resource_adequacy_model.evaluate()
+        )
+        LOG.info(
+            "Original resource adequacy: "
+            + str(self._original_resource_adequacy)
+        )
 
         if self._original_resource_adequacy == 0:
             LOG.error("Invalid ELCC calculation for system with no risk")
             raise RuntimeWarning()
 
         # save intermediate steps
-        self._original_net_capacity_matrix = self._original_responsive_simulation.net_hourly_capacity_matrix
+        self._original_net_capacity_matrix = (
+            self._original_responsive_simulation.net_hourly_capacity_matrix
+        )
         self._intermediate_net_capacity_matrices = []
 
     @property
@@ -155,32 +162,38 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
         """Return the net hourly capacity matrix of the base system"""
         # TODO test
         return self._original_net_capacity_matrix.copy()
-     
+
     @property
-    def intermediate_net_capacity_matrices(self) -> tuple[tuple[float, xr.DataArray]]:
+    def intermediate_net_capacity_matrices(
+        self,
+    ) -> tuple[tuple[float, xr.DataArray]]:
         """Return intermediate net capacity matrices for each step of the ELCC
-        calculation. Each element is a tuple composed of the amount of added 
+        calculation. Each element is a tuple composed of the amount of added
         constant load and the net hourly capacity matrix corresponding to that
         step.
         """
         # TODO test
         return tuple(m for m in self._intermediate_net_capacity_matrices)
-    
-    def evaluate(self, addition: EnergySystem, additional_demand_resolution_pct: float=0.01) -> float:
+
+    def evaluate(
+        self,
+        addition: EnergySystem,
+        additional_demand_resolution_pct: float = 0.01,
+    ) -> float:
         """Return the ELCC of an addition to the energy system.
 
         Args:
             addition (EnergySystem): Energy system to add (possibly a
                 single unit).
-            additional_demand_resolution_pct (float, optional): Resolution of 
-                added demand to find as percent of added nameplate capacity. 
+            additional_demand_resolution_pct (float, optional): Resolution of
+                added demand to find as percent of added nameplate capacity.
                 Defaults to 0.01 (1%). E.g. for a 100 MW addition, the ELCC
-                will be found within 1 MW. 
+                will be found within 1 MW.
 
         Returns:
             float: Amount of added constant load in units of power.
         """
-        
+
         # reset intermediate net capacities
         self._intermediate_net_capacity_matrices = []
 
@@ -219,10 +232,9 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
             additional_demand_upper_bound - additional_demand_lower_bound
         )
         additional_demand = (
-            additional_demand_lower_bound
-            + additional_demand_resolution / 2
+            additional_demand_lower_bound + additional_demand_resolution / 2
         )
-        
+
         # run chained responsive simulation
         additional_responsive_simulation.run(
             non_responsive_net_hourly_capacity_matrix - additional_demand
@@ -232,8 +244,8 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
         )
         self._intermediate_net_capacity_matrices.append(
             (
-                additional_demand, 
-                self._original_responsive_simulation.net_hourly_capacity_matrix
+                additional_demand,
+                self._original_responsive_simulation.net_hourly_capacity_matrix,
             )
         )
 
@@ -241,13 +253,15 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
         new_resource_adequacy = self._resource_adequacy_model.evaluate()
 
         # printout
-        LOG.info("Additional demand: "+str(round(additional_demand)))
-        LOG.info("Resource adequacy: "+str(new_resource_adequacy))
+        LOG.info("Additional demand: " + str(round(additional_demand)))
+        LOG.info("Resource adequacy: " + str(new_resource_adequacy))
 
         # iterate until convergence
         iteration = 0
 
-        while (additional_demand_resolution / addition.system_capacity) > additional_demand_resolution_pct:
+        while (
+            additional_demand_resolution / addition.system_capacity
+        ) > additional_demand_resolution_pct:
             # iterate until original resource adequacy level is met
             if new_resource_adequacy > self._original_resource_adequacy:
                 # if over-reliable, add load
@@ -260,8 +274,7 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
                 additional_demand_upper_bound - additional_demand_lower_bound
             )
             additional_demand = (
-                additional_demand_lower_bound
-                + additional_demand_resolution / 2
+                additional_demand_lower_bound + additional_demand_resolution / 2
             )
 
             # run chained responsive simulation
@@ -273,16 +286,16 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
             )
             self._intermediate_net_capacity_matrices.append(
                 (
-                additional_demand, 
-                self._original_responsive_simulation.net_hourly_capacity_matrix
+                    additional_demand,
+                    self._original_responsive_simulation.net_hourly_capacity_matrix,
                 )
             )
 
             # update resource adequacy
             new_resource_adequacy = self._resource_adequacy_model.evaluate()
 
-            LOG.info("Additional demand: "+str(additional_demand))
-            LOG.info("Resource adequacy: "+str(new_resource_adequacy))
+            LOG.info("Additional demand: " + str(additional_demand))
+            LOG.info("Resource adequacy: " + str(new_resource_adequacy))
 
             # update iteration count
             iteration += 1
