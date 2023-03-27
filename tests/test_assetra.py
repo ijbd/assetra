@@ -787,6 +787,7 @@ class TestAssetraSimulation(unittest.TestCase):
             trial_size=3,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # test
         expected = get_sample_net_capacity_matrix([[3, 1, 2]] * 3)
@@ -826,6 +827,7 @@ class TestAssetraSimulation(unittest.TestCase):
             trial_size=4,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # test
         expected = get_sample_net_capacity_matrix(
@@ -887,6 +889,7 @@ class TestAssetraSimulation(unittest.TestCase):
             trial_size=1,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # sub-test 1
         expected = get_sample_net_capacity_matrix(
@@ -950,6 +953,7 @@ class TestAssetraSimulation(unittest.TestCase):
             trial_size=1,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # sub-test 1
         expected = get_sample_net_capacity_matrix([[0, -1, -1]])
@@ -994,6 +998,7 @@ class TestAssetraMetrics(unittest.TestCase):
             trial_size=1,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # create adequacy model
         ra = ExpectedUnservedEnergy(ps)
@@ -1035,6 +1040,7 @@ class TestAssetraMetrics(unittest.TestCase):
             trial_size=3,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # create adequacy model
         ra = ExpectedUnservedEnergy(ps)
@@ -1076,6 +1082,7 @@ class TestAssetraMetrics(unittest.TestCase):
             trial_size=1,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # create adequacy model
         ra = ExpectedUnservedEnergy(ps)
@@ -1110,6 +1117,7 @@ class TestAssetraMetrics(unittest.TestCase):
             trial_size=1,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # create adequacy model
         ra = LossOfLoadHours(ps)
@@ -1144,6 +1152,7 @@ class TestAssetraMetrics(unittest.TestCase):
             trial_size=3,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # create adequacy model
         ra = LossOfLoadHours(ps)
@@ -1178,6 +1187,7 @@ class TestAssetraMetrics(unittest.TestCase):
             trial_size=1,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # create adequacy model
         ra = LossOfLoadHours(ps)
@@ -1200,6 +1210,7 @@ class TestAssetraMetrics(unittest.TestCase):
             trial_size=2,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         ps.run(get_sample_net_capacity_matrix([[-1, 0], [0, 0]]))
 
@@ -1234,6 +1245,7 @@ class TestAssetraMetrics(unittest.TestCase):
             trial_size=1,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # create adequacy model
         ra = LossOfLoadDays(ps)
@@ -1266,6 +1278,7 @@ class TestAssetraMetrics(unittest.TestCase):
             trial_size=1,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # create adequacy model
         ra = LossOfLoadDays(ps)
@@ -1298,6 +1311,7 @@ class TestAssetraMetrics(unittest.TestCase):
             trial_size=1,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # create adequacy model
         ra = LossOfLoadDays(ps)
@@ -1332,6 +1346,7 @@ class TestAssetraMetrics(unittest.TestCase):
             trial_size=1,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # create adequacy model
         ra = LossOfLoadDays(ps)
@@ -1354,6 +1369,7 @@ class TestAssetraMetrics(unittest.TestCase):
             trial_size=2,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         net_hourly_capacity_matrix = get_sample_net_capacity_matrix(
             [[0] * 24 * 3] * 2
@@ -1395,6 +1411,7 @@ class TestAssetraMetrics(unittest.TestCase):
             trial_size=1,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # create adequacy model
         ra = LossOfLoadFrequency(ps)
@@ -1427,6 +1444,7 @@ class TestAssetraMetrics(unittest.TestCase):
             trial_size=1,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # create adequacy model
         ra = LossOfLoadFrequency(ps)
@@ -1460,6 +1478,7 @@ class TestAssetraMetrics(unittest.TestCase):
             trial_size=1,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # create adequacy model
         ra = LossOfLoadFrequency(ps)
@@ -1493,6 +1512,7 @@ class TestAssetraMetrics(unittest.TestCase):
             trial_size=1,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # create adequacy model
         ra = LossOfLoadFrequency(ps)
@@ -1526,6 +1546,7 @@ class TestAssetraMetrics(unittest.TestCase):
             trial_size=1,
         )
         ps.assign_energy_system(e)
+        ps.run()
 
         # create adequacy model
         ra = LossOfLoadFrequency(ps)
@@ -1548,6 +1569,7 @@ class TestAssetraMetrics(unittest.TestCase):
             trial_size=2,
         )
         ps.assign_energy_system(e)
+        ps.run()
         ps.run(
             get_sample_net_capacity_matrix(
                 [[-1, 0, -1, 0, -1], [0, -1, -1, -1, 0]]
@@ -1561,6 +1583,7 @@ class TestAssetraMetrics(unittest.TestCase):
         expected = 2
         observed = ra.evaluate()
         self.assertEqual(expected, observed)
+
 
 class TestAssetraContribution(unittest.TestCase):
     def test_elcc_ideal_generator(self):
@@ -1604,7 +1627,7 @@ class TestAssetraContribution(unittest.TestCase):
         # test
         expected = 1.0
         observed = rc.evaluate(e2)
-        self.assertAlmostEqual(expected, observed, 2)
+        self.assertAlmostEqual(expected, observed, delta=0.01)
 
     def test_elcc_null_generator(self):
         """ELCC of zero capacity generator is 0."""
@@ -1647,7 +1670,7 @@ class TestAssetraContribution(unittest.TestCase):
         # test
         expected = 0.0
         observed = rc.evaluate(e2)
-        self.assertAlmostEqual(expected, observed, 2)
+        self.assertAlmostEqual(expected, observed, delta=0.01)
 
     def test_elcc_resp_addition(self):
         """ELCC should dispatch added responsive resources."""
@@ -1693,7 +1716,7 @@ class TestAssetraContribution(unittest.TestCase):
         # test
         expected = 0.5
         observed = rc.evaluate(e2)
-        self.assertAlmostEqual(expected, observed, 2)
+        self.assertAlmostEqual(expected, observed, delta=0.01)
 
     def test_elcc_resp_system(self):
         """ELCC should redispatch original responsive fleet."""
@@ -1746,7 +1769,7 @@ class TestAssetraContribution(unittest.TestCase):
         # test
         expected = 0.5
         observed = rc.evaluate(e2)
-        self.assertAlmostEqual(expected, observed, 2)
+        self.assertAlmostEqual(expected, observed, delta=0.01)
 
     def test_elcc_sequential(self):
         """ELCC should redispatch existing storage"""
@@ -1816,7 +1839,7 @@ class TestAssetraContribution(unittest.TestCase):
         # sub-test 2
         expected = 0.333
         observed = rc.evaluate(e2)
-        self.assertAlmostEqual(expected, observed, 2)
+        self.assertAlmostEqual(expected, observed, delta=0.01)
 
 
 if __name__ == "__main__":

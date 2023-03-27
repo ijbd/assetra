@@ -23,6 +23,7 @@ class ProbabilisticSimulation:
         end_hour (datetime) : Ending simulation hour (inclusive).
         trial_size (int) : Number of simulation Monte Carlo trials.
     """
+
     # TODO save probabilistic simulation
     def __init__(
         self, start_hour: datetime, end_hour: datetime, trial_size: int
@@ -66,15 +67,21 @@ class ProbabilisticSimulation:
 
     @property
     def net_hourly_capacity_matrix(self) -> xr.DataArray:
-        """Return the resultant net hourly capacity matrix for this simulation.
-        If it does not exist, trigger a simulation run
+        """Return a copy of the most recently evaluated net hourly capacity
+        matrix
 
         Returns:
             xr.DataArray: Net hourly capacity matrix with dimensions (trials,
                 time) and shape (# of trials, # of hours)
+
+        Raises:
+            RuntimeWarning: Net hourly capacity matrix accessed before running simulation
         """
         if self._net_hourly_capacity_matrix is None:
-            self.run()
+            LOG.error(
+                "Net hourly capacity matrix accessed before running simulation"
+            )
+            raise RuntimeWarning
         return self._net_hourly_capacity_matrix.copy()
 
     def get_hourly_capacity_matrix_by_type(
@@ -96,9 +103,15 @@ class ProbabilisticSimulation:
         Returns:
             xr.DataArray: Hourly capacity matrix with dimensions (trials, time)
               and shape (# of trials, # of hours)
+
+        Raises:
+            RuntimeWarning: Net hourly capacity matrix accessed before running simulation
         """
         if self._hourly_capacity_matrix is None:
-            self.run()
+            LOG.error(
+                "Hourly capacity matrix accessed before running simulation."
+            )
+            raise RuntimeWarning
         return self._hourly_capacity_matrix.sel(unit_type=unit_type)
 
     def run(self, net_hourly_capacity_matrix: xr.DataArray = None) -> None:
