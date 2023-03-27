@@ -1,8 +1,5 @@
 name: Publish package
-on: 
-  push:
-    paths:
-      - assetra/
+on: [push]
 jobs:
   build:
 
