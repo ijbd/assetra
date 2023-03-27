@@ -51,4 +51,5 @@ target/
 # others
 data
 ignore
-examples/01_california/ciso_data/ciso_energy_system
+examples/01_california/ciso_energy_system
+examples/00_basic_use/saved_energy_system

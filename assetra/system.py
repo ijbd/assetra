@@ -1,6 +1,8 @@
 from __future__ import annotations
 from logging import getLogger
 from pathlib import Path
+import errno
+import os
 
 # external
 import xarray as xr
@@ -107,13 +109,20 @@ class EnergySystem:
             directory (Path): Path from which energy system is loaded. This
                 should be the same path passed to EnergySystem.save
         """
-        # TODO check for existing dataset?
+        if not directory.exists():
+            raise FileNotFoundError(
+                errno.ENOENT,
+                os.strerror(errno.ENOENT),
+                str(directory.resolve())
+            )
+        
         self._unit_datasets = dict()
 
         for unit_type in NONRESPONSIVE_UNIT_TYPES + RESPONSIVE_UNIT_TYPES:
             dataset_file = Path(directory, unit_type.__name__ + ".assetra.nc")
 
             if dataset_file.exists():
+                LOG.info("Found unit dataset: " + str(dataset_file.resolve()))
                 self._unit_datasets[unit_type] = xr.open_dataset(dataset_file)
 
 
@@ -157,7 +166,7 @@ class EnergySystemBuilder:
 
         # check for duplicates
         if energy_unit.id in [u.id for u in self._energy_units]:
-            LOG.warning("Duplicate unit added to energy system builder")
+            LOG.warning("Duplicate unit ID added to energy system builder")
             raise RuntimeWarning()
 
         # add unit to internal list

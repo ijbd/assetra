@@ -8,8 +8,6 @@ from assetra.metrics import ResourceAdequacyMetric
 
 import xarray as xr
 
-MAX_ITERATIONS = 10
-
 LOG = getLogger(__name__)
 
 
@@ -142,6 +140,11 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
             self._original_responsive_simulation
         )
         self._original_resource_adequacy = self._resource_adequacy_model.evaluate()
+        LOG.info("Original resource adequacy: " + str(self._original_resource_adequacy))
+
+        if self._original_resource_adequacy == 0:
+            LOG.error("Invalid ELCC calculation for system with no risk")
+            raise RuntimeWarning()
 
         # save intermediate steps
         self._original_net_capacity_matrix = self._original_responsive_simulation.net_hourly_capacity_matrix
@@ -151,7 +154,7 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
     def original_net_capacity_matrix(self) -> xr.DataArray:
         """Return the net hourly capacity matrix of the base system"""
         # TODO test
-        return self._original_net_capacity_matrix
+        return self._original_net_capacity_matrix.copy()
      
     @property
     def intermediate_net_capacity_matrices(self) -> tuple[tuple[float, xr.DataArray]]:
@@ -161,28 +164,22 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
         step.
         """
         # TODO test
-        return (m for m in self._intermediate_net_capacity_matrices)
+        return tuple(m for m in self._intermediate_net_capacity_matrices)
     
-    def evaluate(self, addition: EnergySystem, threshold=0.001) -> float:
+    def evaluate(self, addition: EnergySystem, additional_demand_resolution_pct: float=0.01) -> float:
         """Return the ELCC of an addition to the energy system.
 
         Args:
             addition (EnergySystem): Energy system to add (possibly a
                 single unit).
-            threshold (float, optional): Minimum distance between the original
-                resource adequacy and new resource adequacy to consider equal.
-                Defaults to 0.001
-
-        Raises:
-            RuntimeWarning: Invalid ELCC calculation for system with no
-                shortfalls
+            additional_demand_resolution_pct (float, optional): Resolution of 
+                added demand to find as percent of added nameplate capacity. 
+                Defaults to 0.01 (1%). E.g. for a 100 MW addition, the ELCC
+                will be found within 1 MW. 
 
         Returns:
             float: Amount of added constant load in units of power.
         """
-        if self._original_resource_adequacy == 0:
-            LOG.error("Invalid ELCC calculation for system with no shortfalls")
-            raise RuntimeWarning()
         
         # reset intermediate net capacities
         self._intermediate_net_capacity_matrices = []
@@ -218,12 +215,14 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
         # add load
         additional_demand_upper_bound = addition.system_capacity
         additional_demand_lower_bound = 0
+        additional_demand_resolution = (
+            additional_demand_upper_bound - additional_demand_lower_bound
+        )
         additional_demand = (
             additional_demand_lower_bound
-            + (additional_demand_upper_bound - additional_demand_lower_bound)
-            / 2
+            + additional_demand_resolution / 2
         )
-
+        
         # run chained responsive simulation
         additional_responsive_simulation.run(
             non_responsive_net_hourly_capacity_matrix - additional_demand
@@ -240,39 +239,30 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
 
         # update resource adequacy
         new_resource_adequacy = self._resource_adequacy_model.evaluate()
-        diff = abs(new_resource_adequacy - self._original_resource_adequacy)
+
+        # printout
+        LOG.info("Additional demand: "+str(round(additional_demand)))
+        LOG.info("Resource adequacy: "+str(new_resource_adequacy))
 
         # iterate until convergence
         iteration = 0
 
-        while diff > threshold:
-            # check iteration count
-            if iteration > MAX_ITERATIONS:
-                return additional_demand
-
+        while (additional_demand_resolution / addition.system_capacity) > additional_demand_resolution_pct:
             # iterate until original resource adequacy level is met
             if new_resource_adequacy > self._original_resource_adequacy:
                 # if over-reliable, add load
                 additional_demand_upper_bound = additional_demand
-                additional_demand = (
-                    additional_demand_lower_bound
-                    + (
-                        additional_demand_upper_bound
-                        - additional_demand_lower_bound
-                    )
-                    / 2
-                )
             else:
                 # if under-reliable, remove load
                 additional_demand_lower_bound = additional_demand
-                additional_demand = (
-                    additional_demand_lower_bound
-                    + (
-                        additional_demand_upper_bound
-                        - additional_demand_lower_bound
-                    )
-                    / 2
-                )
+            # add demand
+            additional_demand_resolution = (
+                additional_demand_upper_bound - additional_demand_lower_bound
+            )
+            additional_demand = (
+                additional_demand_lower_bound
+                + additional_demand_resolution / 2
+            )
 
             # run chained responsive simulation
             additional_responsive_simulation.run(
@@ -290,7 +280,9 @@ class EffectiveLoadCarryingCapability(ResourceContributionMetric):
 
             # update resource adequacy
             new_resource_adequacy = self._resource_adequacy_model.evaluate()
-            diff = abs(new_resource_adequacy - self._original_resource_adequacy)
+
+            LOG.info("Additional demand: "+str(additional_demand))
+            LOG.info("Resource adequacy: "+str(new_resource_adequacy))
 
             # update iteration count
             iteration += 1
