@@ -1,5 +1,8 @@
 name: Publish package
-on: [push]
+on: 
+  push:
+    paths:
+      - assetra/
 jobs:
   build:
 
@@ -15,13 +18,9 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Python project version check
-        uses: maybe-hello-world/pyproject-check-version@v3
-        id: versioncheck
-      - name: Check version increment
-        if: ${{ !steps.versioncheck.outputs.local_version_is_higher }}
-        run: core.setFailed('Version not incremented!')
-      - name: Build project
+      - name: Build test pyproject
         run: poetry build
-      - name: Publish project
+      - name: Publish project to TestPyPI
+        run: poetry publish --repository=https://test.pypi.org/legacy/ --username=__token__ --password=${{ secrets.TEST_PYPI_API_TOKEN }}
+      - name: Publish project to PyPI
         run: poetry publish --username=__token__ --password=${{ secrets.PYPI_API_TOKEN }}
