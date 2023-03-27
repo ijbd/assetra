@@ -14,6 +14,8 @@ jobs:
       - name: Build test pyproject
         run: poetry build
       - name: Publish project to TestPyPI
-        run: poetry publish --repository=https://test.pypi.org/legacy/ --username=__token__ --password=${{ secrets.TEST_PYPI_API_TOKEN }}
+        run: |
+          poetry config repositories.testpypi https://test.pypi.org/legacy/
+          poetry publish --repository=testpypi --username=__token__ --password=${{ secrets.TEST_PYPI_API_TOKEN }}
       - name: Publish project to PyPI
         run: poetry publish --username=__token__ --password=${{ secrets.PYPI_API_TOKEN }}
