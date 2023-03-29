@@ -42,16 +42,16 @@ Assumptions
 **Static Units**
  - Static units are instantiated with hourly capacity profiles.
  - Static units always contribute their full hourly capacity.
- - Demand profiles, instantiated as `DemandUnit` objects, are treated identically to static units.
+ - Demand profiles, instantiated as `DemandUnit` objects, are treated identically to static units but with a negative contribution.
 
 **Stochastic Units**
  - Stochastic units are instantiated with hourly capacity profiles and hourly forced outage rates.
  - Stochastic unit outages are sampled independently in each hour.
- - Stochastic units contribute zero capacity in hours where outages occur, otherwise they contribute their full hourly capacity.
+ - Stochastic units contribute zero capacity in hours where unit outages occur, otherwise they contribute their full hourly capacity.
  - Stochastic units are well-suited to model thermal, solar, and wind generators.
 
 **Storage Units**
- - Storage units are dispatched with a greedy policy to minimize expected unserved energy. When net capacity exceeds demand, storage units charge. When system demand exceeds capacity, storage units discharge.
+ - Storage units are dispatched with a greedy policy to minimize expected unserved energy. When net capacity exceeds demand, storage units charge. When system demand exceeds capacity, storage units discharge. Both charging and discharing are limited by the rated power capacity of the unit.
  - Storage units are dispatched sequentially according to the order in which they are added to the system.
  - Storage unit efficiency deratings are applied in equal part on charge and discharge. 
  - Storage units are initialized with full state of charge.
