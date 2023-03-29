@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "assetra"
-version = "1.0.0"
+version = "1.0.1"
 description = "ASSET Lab Resource Adequacy Package"
 authors = [
 	"Isaac Bromley-Dulfano <ijbd@umich.edu>",
