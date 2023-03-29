@@ -1,8 +1,9 @@
 name: Publish package
-on: [push]
-  paths:
-    - assetra/
-    - pyproject.toml
+on: 
+  push:
+    paths:
+      - assetra/
+      - pyproject.toml
 jobs:
   publish:
     runs-on: ubuntu-latest
