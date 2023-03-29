@@ -1,7 +1,10 @@
 name: Publish package
 on: [push]
+  paths:
+    - assetra/
+    - pyproject.toml
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
