@@ -2,13 +2,13 @@
 Contribute
 ==========
 
-Please feel free contribute to the ASSET Lab Resource Adequacy Package.
+Contributions to the ASSET Lab Resource Adequacy Package are welcome and encouraged! Feel free to open issues and pull requests at will.
 
-Using Poetry
-------------
+A Note on Poetry
+----------------
 
-The ASSET Lab Resource Adequacy Package uses the Poetry dependency management tool. 
-From a contributors point of view, Poetry is responsible for two tasks:
+The ASSET Lab Resource Adequacy Package uses `Poetry <https://python-poetry.org/>`_ to manage dependencies. 
+From a contributors point of view, Poetry has two responsibilities:
 
 1. Managing the virtual environment used to run and test code.
 2. Updating the 'pyproject.toml' file which documents dependencies for deployment.
