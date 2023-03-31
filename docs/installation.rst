@@ -4,10 +4,6 @@
 Installation
 ============
 
-
-Stable release
---------------
-
 To install ASSET Lab Resource Adequacy Package, run this command in your terminal:
 
 .. code-block:: console

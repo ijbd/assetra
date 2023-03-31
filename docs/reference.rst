@@ -17,6 +17,7 @@ The assetra object-oriented interface is shown in figure 1 and is best interpret
 The *EnergySystemBuilder* compiles energy units into *EnergySystem* objects (see [1]_ to understand the motivation for this distinction). 
 
 *EnergySystem* objects are attached to *ProbabilisticSimulation* objects whose responsibility is to generate and store probabilistic net hourly capacity matrices for a large sample of Monte Carlo trials. The net hourly capacity matrix of a *ProbabilisticSimulation* is a two dimensional matrix representing net system capacity for each Monte Carlo iteration. 
+The net hourly capacity matrix of a *ProbabilisticSimulation* is a two dimensional matrix representing net system capacity (demand minus capacity) for each Monte Carlo iteration.
 
 *ProbabilisticSimulation* objects are attached to *ResourceAdequacyMetric* objects, who quantify resource adequacy, typically as a function of the net hourly capacity matrix.
 
@@ -28,7 +29,7 @@ In addition to resource adequacy, the assetra package quantifies resource contri
 
    Figure 1: Class interface.
 
-Several of the core types in the assetra model are defined as abstract base classes. Abstract interfaces allow for interchangeability and enable users to extend functionality, for example, by creating custom unit types and resource adequacy metrics without worrying (too much) about the internal operation of the assetra model. See the custom unit example (TODO:LINK) for additional information. Figure 2 shows the abstract base classes and their derived types. 
+Several of the core types in the assetra model are defined as abstract base classes. Abstract interfaces allow for interchangeability and enable users to extend functionality, for example, by creating custom unit types and resource adequacy metrics without modifying the simulation framework. See the usage page for an example. Figure 2 shows the abstract base classes and their derived types. 
 
 .. figure:: _static/assetra-inherited-types.drawio.png
    :scale: 50 %
@@ -37,7 +38,7 @@ Several of the core types in the assetra model are defined as abstract base clas
    Figure 2: Derived types used in the assetra model.
 
 Assumptions
------------------
+-----------
 
 **Static Units**
  - Static units are instantiated with hourly capacity profiles.
@@ -70,10 +71,10 @@ Notes
 Modules
 -------
 .. toctree::
-    :maxdepth: 3
+   :maxdepth: 3
 
-    assetra.units
-    assetra.system
-    assetra.simulation
-    assetra.metrics
-    assetra.contribution
+   assetra.units
+   assetra.system
+   assetra.simulation
+   assetra.metrics
+   assetra.contribution
