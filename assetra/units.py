@@ -31,8 +31,6 @@ class EnergyUnit(ABC):
             e.g. demand units, in which case the nameplate capacity should be
             set to zero.
     """
-
-    # TODO add example for custom unit
     id: int
     nameplate_capacity: float
 
@@ -135,7 +133,6 @@ class StaticUnit(EnergyUnit):
                 energy_unit and time dimensions are energy unit IDs and
                 hourly datetime indices, respectively.
         """
-        # TODO check consistent timeframes or auto-fill zeros
         # build dataset
         unit_dataset = xr.Dataset(
             data_vars=dict(
@@ -262,7 +259,6 @@ class StochasticUnit(EnergyUnit):
                 the energy_unit and time dimensions are energy unit IDs and
                 hourly datetime indices, respectively.
         """
-        # TODO check consistent timeframes or auto-fill zeros
         unit_dataset = xr.Dataset(
             data_vars=dict(
                 nameplate_capacity=(
@@ -354,7 +350,6 @@ class StochasticUnit(EnergyUnit):
             net_hourly_capacity_matrix
         )
 
-        # TODO replace loop w DASK
         # Loop over the energy unit dimension in chunks
         for unit_idx in range(0, unit_dataset.sizes["energy_unit"], chunk_size):
             unit_idx_end = min(
