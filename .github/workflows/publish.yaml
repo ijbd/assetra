@@ -7,7 +7,7 @@ on:
       - .github/workflows/publish.yaml
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: workflow-dispatch
     steps:
       - uses: actions/checkout@v3
       - name: Install poetry
