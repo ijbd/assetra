@@ -109,11 +109,7 @@ class EnergySystem:
                 should be the same path passed to EnergySystem.save
         """
         if not directory.exists():
-            raise FileNotFoundError(
-                errno.ENOENT,
-                os.strerror(errno.ENOENT),
-                str(directory.resolve()),
-            )
+            raise FileNotFoundError()
 
         self._unit_datasets = dict()
 

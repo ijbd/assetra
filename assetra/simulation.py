@@ -137,7 +137,7 @@ class ProbabilisticSimulation:
 
         # setup net hourly capacity matrix
         time_stamps = xr.date_range(
-            self._start_hour, self._end_hour, freq="H", inclusive="both"
+            self._start_hour, self._end_hour, freq="h", inclusive="both"
         )
 
         # initialize net capacity matrix
