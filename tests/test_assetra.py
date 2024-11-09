@@ -15,7 +15,7 @@ def get_sample_time_series(data, start="2016-01-01 00:00"):
     return xr.DataArray(
         data=[float(d) for d in data],
         coords=dict(
-            time=xr.date_range(start=start, periods=len(data), freq="H")
+            time=xr.date_range(start=start, periods=len(data), freq="h")
         ),
     )
 
@@ -25,7 +25,7 @@ def get_sample_net_capacity_matrix(data, start="2016-01-01 00:00"):
         data=[[float(d) for d in row] for row in data],
         coords=dict(
             trial=[i for i in range(len(data))],
-            time=xr.date_range(start=start, periods=len(data[0]), freq="H"),
+            time=xr.date_range(start=start, periods=len(data[0]), freq="h"),
         ),
     )
 
@@ -61,7 +61,7 @@ class TestAssetraUnits(unittest.TestCase):
             coords=dict(
                 energy_unit=[1, 2],
                 time=xr.date_range(
-                    start="2016-01-01 00:00", periods=2, freq="H"
+                    start="2016-01-01 00:00", periods=2, freq="h"
                 ),
             ),
         )
@@ -81,7 +81,7 @@ class TestAssetraUnits(unittest.TestCase):
             coords=dict(
                 energy_unit=[1, 2],
                 time=xr.date_range(
-                    start="2016-01-01 00:00", periods=2, freq="H"
+                    start="2016-01-01 00:00", periods=2, freq="h"
                 ),
             ),
         )
@@ -170,7 +170,7 @@ class TestAssetraUnits(unittest.TestCase):
             coords=dict(
                 energy_unit=[1, 2],
                 time=xr.date_range(
-                    start="2016-01-01 00:00", periods=2, freq="H"
+                    start="2016-01-01 00:00", periods=2, freq="h"
                 ),
             ),
         )
@@ -194,7 +194,7 @@ class TestAssetraUnits(unittest.TestCase):
             coords=dict(
                 energy_unit=[1, 2],
                 time=xr.date_range(
-                    start="2016-01-01 00:00", periods=2, freq="H"
+                    start="2016-01-01 00:00", periods=2, freq="h"
                 ),
             ),
         )
@@ -652,7 +652,7 @@ class TestAssetraSystem(unittest.TestCase):
                     ),
                 )
             )
-            b
+            
             e = b.build()
 
             # save system

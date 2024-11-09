@@ -11,12 +11,8 @@ readme = "README.rst"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-pandas = "^1.4.4"
-openpyxl = "^3.0.10"
-xarray = "^2023.2.0"
-netCDF4 = "^1.6.2"
-numpy = "^1.24.2"
-
+netCDF4 = "^1.7.2"
+xarray = "^2024.10.0"
 
 [build-system]
 requires = ["poetry-core"]
