@@ -202,6 +202,10 @@ class StaticUnit(EnergyUnit):
                 dataset with the same dimensions and shape as net hourly
                 capacity matrix
         """
+        print("Unit dataset:", unit_dataset)
+        print("Net hourly capacity matrix:", net_hourly_capacity_matrix)
+
+      
         # time-indexing
         unit_dataset = unit_dataset.sel(time=net_hourly_capacity_matrix.time)
 
@@ -547,13 +551,14 @@ class StorageUnit(EnergyUnit):
         # build list
         units = []
 
-        for id, nc, cr, dr, cc, re in zip(
+        for id, nc, cr, dr, cc, re, sd in zip(
             unit_dataset.energy_unit,
             unit_dataset.nameplate_capacity,
             unit_dataset.charge_rate,
             unit_dataset.discharge_rate,
             unit_dataset.charge_capacity,
             unit_dataset.roundtrip_efficiency,
+            unit_dataset.storage_duration,
         ):
             units.append(
                 StorageUnit(
@@ -563,6 +568,7 @@ class StorageUnit(EnergyUnit):
                     discharge_rate=float(dr),
                     charge_capacity=float(cc),
                     roundtrip_efficiency=float(re),
+                    storage_duration = float(sd),
                 )
             )
 
