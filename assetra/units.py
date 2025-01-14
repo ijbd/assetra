@@ -408,12 +408,14 @@ class StorageUnit(EnergyUnit):
         discharge_rate (float) : Discharge rate in units of power
         charge_capacity (float) : Maximum charge capacity in units of energy
         roundtrip_efficiency (float) : Roundtrip efficiency as decimal percent
+        storage_duration (float): Storage duration in hours
     """
 
     charge_rate: float
     discharge_rate: float
     charge_capacity: float
     roundtrip_efficiency: float
+    storage_duration: float
 
     def _get_hourly_capacity(
         charge_rate: float,
@@ -421,6 +423,8 @@ class StorageUnit(EnergyUnit):
         charge_capacity: float,
         roundtrip_efficiency: float,
         net_hourly_capacity: xr.DataArray,
+        storage_duration: float,
+
     ) -> xr.DataArray:
         """Greedy storage dispatch
 
@@ -529,6 +533,10 @@ class StorageUnit(EnergyUnit):
                     ["energy_unit"],
                     [unit.roundtrip_efficiency for unit in units],
                 ),
+                 storage_duration=(
+                    ["energy_unit"],
+                    [unit.storage_duration for unit in units],
+                ),
             ),
             coords=dict(energy_unit=[unit.id for unit in units]),
         )
@@ -617,6 +625,7 @@ class StorageUnit(EnergyUnit):
                     unit.discharge_rate,
                     unit.charge_capacity,
                     unit.roundtrip_efficiency,
+                    unit.storage_duration,
                     trial,
                 )
 
