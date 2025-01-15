@@ -409,6 +409,8 @@ class StorageUnit(EnergyUnit):
         charge_capacity (float) : Maximum charge capacity in units of energy
         roundtrip_efficiency (float) : Roundtrip efficiency as decimal percent
         storage_duration (float): Storage duration in hours
+        storage_class (str): Storage class in hours: Classes are less than 4 hour storage,
+            4 hour storage, 6 hour storage, 8 hour storage, and 10 hour storage.
     """
 
     charge_rate: float
@@ -416,6 +418,8 @@ class StorageUnit(EnergyUnit):
     charge_capacity: float
     roundtrip_efficiency: float
     storage_duration: float
+    storage_class: str
+
 
     def _get_hourly_capacity(
         charge_rate: float,
@@ -424,6 +428,7 @@ class StorageUnit(EnergyUnit):
         roundtrip_efficiency: float,
         net_hourly_capacity: xr.DataArray,
         storage_duration: float,
+        storage_class: str,
 
     ) -> xr.DataArray:
         """Greedy storage dispatch
@@ -537,6 +542,10 @@ class StorageUnit(EnergyUnit):
                     ["energy_unit"],
                     [unit.storage_duration for unit in units],
                 ),
+                storage_class=(
+                    ["energy_unit"],
+                    [unit.storage_class for unit in units],
+                ),
             ),
             coords=dict(energy_unit=[unit.id for unit in units]),
         )
@@ -559,7 +568,7 @@ class StorageUnit(EnergyUnit):
         # build list
         units = []
 
-        for id, nc, cr, dr, cc, re, sd in zip(
+        for id, nc, cr, dr, cc, re, sd, sc in zip(
             unit_dataset.energy_unit,
             unit_dataset.nameplate_capacity,
             unit_dataset.charge_rate,
@@ -567,6 +576,8 @@ class StorageUnit(EnergyUnit):
             unit_dataset.charge_capacity,
             unit_dataset.roundtrip_efficiency,
             unit_dataset.storage_duration,
+            unit_dataset.storage_class,
+
         ):
             units.append(
                 StorageUnit(
@@ -576,7 +587,8 @@ class StorageUnit(EnergyUnit):
                     discharge_rate=float(dr),
                     charge_capacity=float(cc),
                     roundtrip_efficiency=float(re),
-                    storage_duration = float(sd),
+                    storage_duration = str(sd),
+                    storage_class=float(sc),
                 )
             )
 
@@ -626,6 +638,7 @@ class StorageUnit(EnergyUnit):
                     unit.charge_capacity,
                     unit.roundtrip_efficiency,
                     unit.storage_duration,
+                    unit.storage_class,
                     trial,
                 )
 
