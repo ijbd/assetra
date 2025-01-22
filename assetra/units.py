@@ -409,7 +409,7 @@ class StorageUnit(EnergyUnit):
         charge_capacity (float) : Maximum charge capacity in units of energy
         roundtrip_efficiency (float) : Roundtrip efficiency as decimal percent
         storage_duration (float): Storage duration in hours
-        storage_class (str): Storage class in hours: Classes are less than 4 hour storage,
+        storage_class (int): Storage class in hours: Classes are less than 4 hour storage,
             4 hour storage, 6 hour storage, 8 hour storage, and 10 hour storage.
     """
 
@@ -418,7 +418,7 @@ class StorageUnit(EnergyUnit):
     charge_capacity: float
     roundtrip_efficiency: float
     storage_duration: float
-    storage_class: str
+    storage_class: float
 
 
     def _get_hourly_capacity(
@@ -426,10 +426,9 @@ class StorageUnit(EnergyUnit):
         discharge_rate: float,
         charge_capacity: float,
         roundtrip_efficiency: float,
-        net_hourly_capacity: xr.DataArray,
         storage_duration: float,
-        storage_class: str,
-
+        storage_class: float,
+        net_hourly_capacity: xr.DataArray,
     ) -> xr.DataArray:
         """Greedy storage dispatch
 
@@ -587,7 +586,7 @@ class StorageUnit(EnergyUnit):
                     discharge_rate=float(dr),
                     charge_capacity=float(cc),
                     roundtrip_efficiency=float(re),
-                    storage_duration = str(sd),
+                    storage_duration = float(sd),
                     storage_class=float(sc),
                 )
             )
@@ -621,8 +620,14 @@ class StorageUnit(EnergyUnit):
         """
         units = StorageUnit.from_unit_dataset(unit_dataset)
 
+        #sort unit by storage duration to dispatch longer duration storage units first
+        #units_sorted = sorted(units, key=lambda unit: unit.storage_duration, reverse=True)
+
+        #change "units" to "units_sorted" in the following line
         net_adj_hourly_capacity_matrix = net_hourly_capacity_matrix.copy()
         for idx, unit in enumerate(units):
+            print(f"Dispatching storage unit {idx + 1} of {len(units)}")
+            print(f"Storage unit details: {unit}")
             # print update
             LOG.info(
                 "Dispatching storage unit "
