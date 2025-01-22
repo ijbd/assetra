@@ -202,10 +202,6 @@ class StaticUnit(EnergyUnit):
                 dataset with the same dimensions and shape as net hourly
                 capacity matrix
         """
-        print("Unit dataset:", unit_dataset)
-        print("Net hourly capacity matrix:", net_hourly_capacity_matrix)
-
-      
         # time-indexing
         unit_dataset = unit_dataset.sel(time=net_hourly_capacity_matrix.time)
 
@@ -408,9 +404,6 @@ class StorageUnit(EnergyUnit):
         discharge_rate (float) : Discharge rate in units of power
         charge_capacity (float) : Maximum charge capacity in units of energy
         roundtrip_efficiency (float) : Roundtrip efficiency as decimal percent
-        storage_duration (float): Storage duration in hours
-        storage_class (int): Storage class in hours: Classes are less than 4 hour storage,
-            4 hour storage, 6 hour storage, 8 hour storage, and 10 hour storage.
     """
 
     charge_rate: float
@@ -420,15 +413,14 @@ class StorageUnit(EnergyUnit):
     storage_duration: float
     storage_class: float
 
-
     def _get_hourly_capacity(
         charge_rate: float,
         discharge_rate: float,
         charge_capacity: float,
         roundtrip_efficiency: float,
+        net_hourly_capacity: xr.DataArray,
         storage_duration: float,
         storage_class: float,
-        net_hourly_capacity: xr.DataArray,
     ) -> xr.DataArray:
         """Greedy storage dispatch
 
@@ -544,7 +536,7 @@ class StorageUnit(EnergyUnit):
                 storage_class=(
                     ["energy_unit"],
                     [unit.storage_class for unit in units],
-                ),
+                ),                
             ),
             coords=dict(energy_unit=[unit.id for unit in units]),
         )
@@ -576,7 +568,6 @@ class StorageUnit(EnergyUnit):
             unit_dataset.roundtrip_efficiency,
             unit_dataset.storage_duration,
             unit_dataset.storage_class,
-
         ):
             units.append(
                 StorageUnit(
@@ -586,7 +577,7 @@ class StorageUnit(EnergyUnit):
                     discharge_rate=float(dr),
                     charge_capacity=float(cc),
                     roundtrip_efficiency=float(re),
-                    storage_duration = float(sd),
+                    storage_duration=float(sd),
                     storage_class=float(sc),
                 )
             )
@@ -620,14 +611,8 @@ class StorageUnit(EnergyUnit):
         """
         units = StorageUnit.from_unit_dataset(unit_dataset)
 
-        #sort unit by storage duration to dispatch longer duration storage units first
-        #units_sorted = sorted(units, key=lambda unit: unit.storage_duration, reverse=True)
-
-        #change "units" to "units_sorted" in the following line
         net_adj_hourly_capacity_matrix = net_hourly_capacity_matrix.copy()
         for idx, unit in enumerate(units):
-            print(f"Dispatching storage unit {idx + 1} of {len(units)}")
-            print(f"Storage unit details: {unit}")
             # print update
             LOG.info(
                 "Dispatching storage unit "
@@ -642,9 +627,9 @@ class StorageUnit(EnergyUnit):
                     unit.discharge_rate,
                     unit.charge_capacity,
                     unit.roundtrip_efficiency,
+                    trial,
                     unit.storage_duration,
                     unit.storage_class,
-                    trial,
                 )
 
         return net_adj_hourly_capacity_matrix - net_hourly_capacity_matrix
