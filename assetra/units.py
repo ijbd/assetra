@@ -243,6 +243,7 @@ class StochasticUnit(EnergyUnit):
 
     hourly_capacity: xr.DataArray
     hourly_forced_outage_rate: xr.DataArray
+    marginal_cost: float
 
     @staticmethod
     def to_unit_dataset(units: list[StochasticUnit]):
@@ -272,6 +273,10 @@ class StochasticUnit(EnergyUnit):
                 hourly_forced_outage_rate=(
                     ["energy_unit", "time"],
                     [unit.hourly_forced_outage_rate for unit in units],
+                ),
+                marginal_cost=(
+                    ["energy_unit"],
+                    [unit.marginal_cost for unit in units],
                 ),
             ),
             coords=dict(
@@ -304,6 +309,7 @@ class StochasticUnit(EnergyUnit):
                     unit_dataset.nameplate_capacity.loc[id],
                     unit_dataset.hourly_capacity.loc[id],
                     unit_dataset.hourly_forced_outage_rate.loc[id],
+                    marginal_cost=float(unit_dataset.marginal_cost.loc[id]),
                 )
             )
 
