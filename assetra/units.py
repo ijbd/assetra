@@ -665,6 +665,6 @@ class DemandUnit(StaticUnit):
 # responsive and non-responsive units.
 #
 # these lists also serve to track all "valid" units that can be added
-# to an energy system
+# to an energy system 
 NONRESPONSIVE_UNIT_TYPES = [DemandUnit, StaticUnit, StochasticUnit]
 RESPONSIVE_UNIT_TYPES = [StorageUnit]
