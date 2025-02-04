@@ -616,7 +616,8 @@ class StorageUnit(EnergyUnit):
                 capacity matrix
         """
         units = StorageUnit.from_unit_dataset(unit_dataset)
-
+        units = sorted(units, key=lambda unit: unit.storage_duration, reverse=True)
+        
         net_adj_hourly_capacity_matrix = net_hourly_capacity_matrix.copy()
         for idx, unit in enumerate(units):
             # print update
