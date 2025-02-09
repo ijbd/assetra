@@ -1,4 +1,3 @@
 """Top-level package for ASSET Lab Resource Adequacy Model."""
-
-# beginning with version 1.0.2 follow https://semver.org/
-__version__ = "1.0.3"
+# use date of release for versioning
+__version__ = "2025.02.09"
