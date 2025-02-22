@@ -29,20 +29,24 @@ If you haven't already, setup a GitHub token for your personal device.
 - Create a token `here <https://github.com/settings/tokens>`_.
 - Your token will have to be re-created after the expiration date you select.
 - Ensure 'repo' and 'workflow' are checked.
-- To store your token locally, run :code:`git config --global credential.helper store`. You will be prompted for your token the next time you push. If needed, credentials can be discarded by running :code:`git config --global --unset credential.helper`.
+- To store your token locally, run :code:`git config --global credential.helper store`. You will be prompted for your token the next time you push changes. If needed, credentials can be discarded by running :code:`git config --global --unset credential.helper`.
 
-Push local changes back to your fork on GitHub.::
+Push local changes back to your fork on GitHub. Use your GitHub username and token if prompted for username and password.::
 
     git push 
 
-A Note on Poetry
+Open a pull request to ijbd/assetra to submit your modifications for review.
+
+Sync your fork to match ijbd/assetra from GitHub.
+
+Setup Poetry
 ----------------
 
-The ASSET Lab Resource Adequacy Package uses `Poetry <https://python-poetry.org/>`_ to manage dependencies. 
-From a contributors point of view, Poetry has two responsibilities:
+The assetra package uses `Poetry <https://python-poetry.org/>`_ to manage dependencies. 
+From a contributor's point of view, Poetry has two responsibilities:
 
-1. Managing the virtual environment used to run and test code.
-2. Updating the 'pyproject.toml' file which documents dependencies for deployment.
+1. Manage the virtual environment used to run and test code.
+2. Update the 'pyproject.toml' file which defines dependencies for installing assetra.
 
 Install pipx ::
 
@@ -67,5 +71,4 @@ To install the defined dependencies ::
 Poetry is used to synchronize contributors' environments. 
 Whenever an environment change is made (i.e. packages are installed or updated), 
 contributors should commit their modifications to the `pyproject.toml` and `poetry.lock` files.
-3. If you haven't already, setup a GitHub token for your personal device (see footnotes)
 Other contributors then run `poetry install` to remain in sync.
