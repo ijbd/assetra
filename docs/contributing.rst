@@ -9,6 +9,7 @@ Basic Contribution for New GitHub Users
 
 Create a fork of `assetra <https://github.com/ijbd/assetra>`_ on GitHub.
 
+
 Create a new issue describing the reason for your modification on the `issues <https://github.com/ijbd/assetra/issues>`_ page. Be sure to check if an open issue already exists!
 
 Clone your fork locally from the command line.::
