@@ -2,7 +2,38 @@
 Contribute
 ==========
 
-Contributions to the ASSET Lab Resource Adequacy Package are welcome and encouraged! Feel free to open issues and pull requests at will.
+Please contribute to the ASSET Lab Resource Adequacy Package!
+
+Basic Contribution for New GitHub Users
+----------------
+
+Create a fork of `assetra <https://github.com/ijbd/assetra>`_ on GitHub.
+
+Create a new issue describing the reason for your modification on the `issues <https://github.com/ijbd/assetra/issues>`_ page. Be sure to check if an open issue already exists!
+
+Clone your fork locally from the command line.::
+
+    git clone https://github.com/<your username>/assetra.git
+
+Create a branch in your fork.::
+
+    git switch -c <branch-name>
+
+Modify files, then commit changes.::
+
+    git status # show files modified
+    git add <files> # space-separated list of files modified to be committed.
+    git commit # will open a text editor for you to describe your changes.
+
+If you haven't already, setup a GitHub token for your personal device.
+- Create a token `here <https://github.com/settings/tokens>`_.
+- Your token will have to be re-created after the expiration date you select.
+- Ensure 'repo' and 'workflow' are checked.
+- To store your token locally, run :code:`git config --global credential.helper store`. You will be prompted for your token the next time you commit. If needed, credentials can be discarded by running :code:`git config --global --unset credential.helper`.
+
+Push local changes back to your fork on GitHub.::
+
+    git push 
 
 A Note on Poetry
 ----------------
