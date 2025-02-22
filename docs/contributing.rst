@@ -29,7 +29,7 @@ If you haven't already, setup a GitHub token for your personal device.
 - Create a token `here <https://github.com/settings/tokens>`_.
 - Your token will have to be re-created after the expiration date you select.
 - Ensure 'repo' and 'workflow' are checked.
-- To store your token locally, run :code:`git config --global credential.helper store`. You will be prompted for your token the next time you commit. If needed, credentials can be discarded by running :code:`git config --global --unset credential.helper`.
+- To store your token locally, run :code:`git config --global credential.helper store`. You will be prompted for your token the next time you push. If needed, credentials can be discarded by running :code:`git config --global --unset credential.helper`.
 
 Push local changes back to your fork on GitHub.::
 
@@ -67,4 +67,5 @@ To install the defined dependencies ::
 Poetry is used to synchronize contributors' environments. 
 Whenever an environment change is made (i.e. packages are installed or updated), 
 contributors should commit their modifications to the `pyproject.toml` and `poetry.lock` files.
+3. If you haven't already, setup a GitHub token for your personal device (see footnotes)
 Other contributors then run `poetry install` to remain in sync.
