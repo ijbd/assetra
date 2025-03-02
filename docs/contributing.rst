@@ -61,7 +61,7 @@ Setup
     
     #. Store your token locally.::
         
-        git config --global credential.helper store 
+        git config --global credential.helper store
    
     * You will be prompted for your token the next time you push changes. 
     * To unset credentials (e.g. after they expire), use :code:`echo "url=https://github.com" | git credential reject`.
