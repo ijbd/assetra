@@ -9,13 +9,13 @@ Setup
 
 #. Install `Python 3 <https://www.python.org/downloads/>`_.
 
-#. Install `https://git-scm.com/downloads`_.
+#. Install `Git <https://git-scm.com/downloads>`_.
 
 #. Create a `GitHub <https://github.com/>`_ Account.
 
-#. Fork `assetra <https://github.com/ijbd/assetra>`_ on GitHub. 
+#. Fork `:code:`assetra` <https://github.com/ijbd/assetra>`_ on GitHub. 
    
-    * This creates your own version of the assetra repository stored at `https://github.com/<your username>/assetra.git`. You will make changes to your fork and submit them for review to be added to the main assetra repository.
+    * This creates your own version of the :code:`assetra` repository. You will make changes to your fork and submit them for review to be added to the main :code:`assetra` repository.
 
 #. Clone your Fork Locally.
 
@@ -33,7 +33,7 @@ Setup
 
 #. Setup Poetry
 
-    * Poetry is used to (1) manage virtual environments used to test development code, (2) maintain the :code:`pyproject.toml` file which defines package dependencies to be installed with :code:`assetra` by end-users, and (3) automate the process of building the :code:`assetra` package and publishing to pypi. When a contributor updates their environment (i.e. they install new or upgrade existing dependencies that need to be shipped with assetra), they should commit their modifications to the :code:`pyproject.toml` and :code:`poetry.ock` files. Other contributors should then run `poetry install` to remain in sync.
+    * Poetry is used to (1) manage virtual environments used to test development code, (2) maintain the :code:`pyproject.toml` file which defines package dependencies to be installed with :code:`assetra` by end-users, and (3) automate the process of building the :code:`assetra` package and publishing to pypi. When a contributor updates their environment (i.e. they install new or upgrade existing dependencies that need to be shipped with :code:`assetra`), they should commit their modifications to the :code:`pyproject.toml` and :code:`poetry.lock` files. Other contributors should then run `poetry install` to remain in sync.
 
     #. Install pipx::
 
@@ -60,14 +60,15 @@ Setup
 
         poetry run python -m unnittest
        
-  
+
+       ~~~ left off 2025.03.02 ~~~ 
 #. Push local changes back to your fork on GitHub. Use your GitHub username and token if prompted for username and password.::
 
     git push 
 
-Open a pull request to ijbd/assetra to submit your modifications for review.
+Open a pull request to :code:`ijbd/assetra` to submit your modifications for review.
 
-Sync your fork to match ijbd/assetra from GitHub.
+Sync your fork to match :code`ijbd/assetra` from GitHub.
 
 
 
@@ -81,18 +82,18 @@ Sync your fork to match ijbd/assetra from GitHub.
 
 
 
-#. Create a new issue describing the reason for your modification on the `issues <https://github.com/ijbd/assetra/issues>`_ page. Be sure to check if an open issue already exists!
+#. Create a new issue describing the reason for your modification on the `issues <https://github.com/ijbd/assetra`/issues>`_ page. Be sure to check if an open issue already exists!
 
    
    
 Setup Poetry
 ----------------
 
-The assetra package uses `Poetry <https://python-poetry.org/>`_ to manage dependencies. 
+The :code:`assetra` package uses `Poetry <https://python-poetry.org/>`_ to manage dependencies. 
 From a contributor's point of view, Poetry has two responsibilities:
 
 1. Manage the virtual environment used to run and test code.
-2. Update the 'pyproject.toml' file which defines dependencies for installing assetra.
+2. Update the 'pyproject.toml' file which defines dependencies for installing :code:`assetra`.
 
 Install pipx ::
 
