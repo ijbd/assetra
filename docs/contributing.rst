@@ -23,6 +23,14 @@ Setup
 
         git clone https://github.com/<your username>/assetra.git
 
+#. Setup SSH Key to Connect to GitHub
+
+    #. Follow Instructions on `GitHub <https://docs.github.com/en/authentication/connecting-to-github-with-ssh/about-ssh>`_.
+
+    #. Change Connection from HTTPS to SSH::
+
+        git remote set-url origin git@github.com:<user name>/assetra.git 
+
 #. Setup Poetry
 
     * Poetry is used to (1) manage virtual environments used to test development code, (2) maintain the :code:`pyproject.toml` file which defines package dependencies to be installed with :code:`assetra` by end-users, and (3) automate the process of building the :code:`assetra` package and publishing to pypi. When a contributor updates their environment (i.e. they install new or upgrade existing dependencies that need to be shipped with assetra), they should commit their modifications to the :code:`pyproject.toml` and :code:`poetry.ock` files. Other contributors should then run `poetry install` to remain in sync.
@@ -52,20 +60,7 @@ Setup
 
         poetry run python -m unnittest
        
-#. Setup GitHub Token
-    
-    #. Create a token `here <https://github.com/settings/tokens>`_.
-        
-        * Your will re-create your token after the expiration date you select.
-        * Ensure 'repo' and 'workflow' are checked.
-    
-    #. Store your token locally.::
-        
-        git config --global credential.helper store
-   
-    * You will be prompted for your token the next time you push changes. 
-    * To unset credentials (e.g. after they expire), use :code:`echo "url=https://github.com" | git credential reject`.
-
+  
 #. Push local changes back to your fork on GitHub. Use your GitHub username and token if prompted for username and password.::
 
     git push 
