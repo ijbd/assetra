@@ -2,16 +2,16 @@
 Contribute
 ==========
 
-Please contribute to the ASSET Lab Resource Adequacy Package! Refer to the guidelines below, intended for folks with wide range of open-source development experience.
+Please contribute to the ASSET Lab Resource Adequacy Package! The guidelines below are intended for contributors with a wide range of open-source development experience.
 
 Setup
 -----
 
-#. Install `Python 3 <https://www.python.org/downloads/>`_.
+1. Install `Python 3 <https://www.python.org/downloads/>`_.
 
 #. Install `Git <https://git-scm.com/downloads>`_.
 
-#. Create a `GitHub <https://github.com/>`_ Account.
+#. Create a `GitHub <https://github.com/>`_ Account. Setup authentication via `SSH Key <https://docs.github.com/en/authentication/connecting-to-github-with-ssh/about-ssh>_` or `Personal Access Token <https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens>_`.
 
 #. Fork `:code:`assetra` <https://github.com/ijbd/assetra>`_ on GitHub. 
    
@@ -22,14 +22,6 @@ Setup
     #. Navitage to the directory where you would like your clone to live.::
 
         git clone https://github.com/<your username>/assetra.git
-
-#. Setup SSH Key to Connect to GitHub
-
-    #. Follow Instructions on `GitHub <https://docs.github.com/en/authentication/connecting-to-github-with-ssh/about-ssh>`_.
-
-    #. Change Connection from HTTPS to SSH::
-
-        git remote set-url origin git@github.com:<user name>/assetra.git 
 
 #. Setup Poetry
 
@@ -60,8 +52,18 @@ Setup
 
         poetry run python -m unnittest
        
+Contributor Workflow
+--------------------
 
-       ~~~ left off 2025.03.02 ~~~ 
+1. Identify an existing issue or open a new one in `GitHub <https://github.com/ijbd/assetra/issues>`.
+
+#. Create a branch in your fork to work on your contributions.
+
+#. Follow these guidelines for contributions:
+'
+    1. aa
+    #. bb
+    
 #. Push local changes back to your fork on GitHub. Use your GitHub username and token if prompted for username and password.::
 
     git push 
@@ -71,51 +73,16 @@ Open a pull request to :code:`ijbd/assetra` to submit your modifications for rev
 Sync your fork to match :code`ijbd/assetra` from GitHub.
 
 
+Reviewer Workflow
+-----------------
 
 
-
-#. Modify files, then commit changes.::
+1. Modify files, then commit changes.::
 
     git status # show files modified
     git add <files> # space-separated list of files modified to be committed.
     git commit # will open a text editor for you to describe your changes.
 
-
-
+    
 #. Create a new issue describing the reason for your modification on the `issues <https://github.com/ijbd/assetra`/issues>`_ page. Be sure to check if an open issue already exists!
 
-   
-   
-Setup Poetry
-----------------
-
-The :code:`assetra` package uses `Poetry <https://python-poetry.org/>`_ to manage dependencies. 
-From a contributor's point of view, Poetry has two responsibilities:
-
-1. Manage the virtual environment used to run and test code.
-2. Update the 'pyproject.toml' file which defines dependencies for installing :code:`assetra`.
-
-Install pipx ::
-
-    python -m pip install pipx
-
-Installing Poetry ::
-
-    pipx install poetry
-
-Poetry recognizes existing virtual environments. To create a new environment ::
-
-    python -m venv env
-
-To activate the virtual environment ::
-
-    source env/bin/activate
-
-To install the defined dependencies ::
-
-    poetry install
-
-Poetry is used to synchronize contributors' environments. 
-Whenever an environment change is made (i.e. packages are installed or updated), 
-contributors should commit their modifications to the `pyproject.toml` and `poetry.lock` files.
-Other contributors then run `poetry install` to remain in sync.
