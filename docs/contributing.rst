@@ -11,9 +11,9 @@ Setup
 
 #. Install `Git <https://git-scm.com/downloads>`_.
 
-#. Create a `GitHub <https://github.com/>`_ Account. Setup authentication via `SSH Key <https://docs.github.com/en/authentication/connecting-to-github-with-ssh/about-ssh>_` or `Personal Access Token <https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens>_`.
+#. Create a `GitHub <https://github.com/>`_ Account. Setup authentication via `SSH Key <https://docs.github.com/en/authentication/connecting-to-github-with-ssh/about-ssh>`_ or `Personal Access Token <https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens>`_.
 
-#. Fork `:code:`assetra` <https://github.com/ijbd/assetra>`_ on GitHub. 
+#. Fork `assetra <https://github.com/ijbd/assetra>`_on GitHub. 
    
     * This creates your own version of the :code:`assetra` repository. You will make changes to your fork and submit them for review to be added to the main :code:`assetra` repository.
 
