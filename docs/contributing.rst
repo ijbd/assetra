@@ -19,7 +19,7 @@ Setup
 
 #. Clone your Fork Locally.
 
-    #. Navitage to the directory where you would like your clone to live.::
+    *. Navitage to the directory where you would like your clone to live.::
 
         git clone https://github.com/<your username>/assetra.git
 
@@ -55,7 +55,7 @@ Setup
 Contributor Workflow
 --------------------
 
-1. Identify an existing issue or open a new one in `GitHub <https://github.com/ijbd/assetra/issues>`.
+1. Identify an existing issue or open a new one in `GitHub <https://github.com/ijbd/assetra/issues>`_.
 
 #. Create a branch in your fork to work on your contributions.
 
