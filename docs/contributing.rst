@@ -31,7 +31,7 @@ Setup
 
 #. Setup Poetry
 
-    * Poetry is used to (1) manage virtual environments used to test development code, (2) maintain the :code:`pyproject.toml` file which defines package dependencies to be installed with :code:`assetra` by end-users, and (3) automate the process of building the :code:`assetra` package and publishing to pypi. When a contributor updates their environment (i.e. they install new or upgrade existing dependencies that need to be shipped with :code:`assetra`), they should commit their modifications to the :code:`pyproject.toml` and :code:`poetry.lock` files. Other contributors should then run `poetry install` to remain in sync.
+    * Poetry is used to (1) manage virtual environments used to test development code, (2) maintain the :code:`pyproject.toml` file which defines package dependencies to be installed with :code:`assetra` by end-users, and (3) automate the process of building the :code:`assetra` package and publishing to pypi. When a contributor updates their environment (i.e. they install new or upgrade existing dependencies that need to be shipped with :code:`assetra`), they should commit their modifications to the :code:`pyproject.toml` and :code:`poetry.lock` files. Other contributors should then run :code:`poetry install` to remain in sync.
 
     a. Install pipx::
 
@@ -65,31 +65,46 @@ Contributor Workflow
 
 #. Create a branch in your fork to work on your contributions.
 
-#. Follow these guidelines for contributions:
-'
-    1. aa
+#. Follow these guidelines when contributing::
+
+    1. Write at least one unit test for every function added or modified.
+
+    #. Write at least one example for every new EnergyUnit added.
     
-    #. bb
+    #. Run all unit tests. Ensure they run successfully.
     
-#. Push local changes back to your fork on GitHub. Use your GitHub username and token if prompted for username and password.::
-
-    git push 
-
-Open a pull request to :code:`ijbd/assetra` to submit your modifications for review.
-
-Sync your fork to match :code`ijbd/assetra` from GitHub.
-
-
-Reviewer Workflow
------------------
-
-
-1. Modify files, then commit changes.::
+       python -m unittest
+    
+#. Modify files and commit changes::
 
     git status # show files modified
     git add <files> # space-separated list of files modified to be committed.
     git commit # will open a text editor for you to describe your changes.
-
     
-#. Create a new issue describing the reason for your modification on the `issues <https://github.com/ijbd/assetra`/issues>`_ page. Be sure to check if an open issue already exists!
+#. Push local changes back to your fork on GitHub::
+
+    git push 
+
+#. Open a pull request to :code:`ijbd/assetra` to submit your modifications for review.
+
+#. Once your changes have been merged, sync your fork to match :code`ijbd/assetra` from GitHub.
+
+Reviewer Workflow
+-----------------
+
+1. Review code modifications.
+
+#. Review new/modified unit tests.
+
+#. Review new/modified examples.
+
+#. Run all unit tests.
+
+#. Run new/modified examples.
+
+#. Update the code version::
+
+    a. Checkout the modified code
+    
+    #. bump the code version in the following locations.
 
