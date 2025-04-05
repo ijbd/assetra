@@ -7,19 +7,25 @@ Please contribute to the ASSET Lab Resource Adequacy Package! The guidelines bel
 Setup
 -----
 
-1. Install `Python 3 <https://www.python.org/downloads/>`_.
+1. `Install Python 3 <https://www.python.org/downloads/>`_
 
-#. Install `Git <https://git-scm.com/downloads>`_.
+#. `Install Git <https://git-scm.com/downloads>`_
 
-#. Create a `GitHub <https://github.com/>`_ Account. Setup authentication via `SSH Key <https://docs.github.com/en/authentication/connecting-to-github-with-ssh/about-ssh>`_ or `Personal Access Token <https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens>`_.
+#. `Create a GitHub Account <https://github.com/>`_
 
-#. Fork `assetra <https://github.com/ijbd/assetra>`_on GitHub. 
+#. Setup GitHub Authentication. Either:
+
+    a. `Setup GitHub SSH Keys <https://docs.github.com/en/authentication/connecting-to-github-with-ssh/about-ssh>`_
+    
+    b. `Setup Personal Access Token <https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens>`_
+
+#. Fork :code:`assetra` on `GitHub <https://github.com/ijbd/assetra>`_. 
    
     * This creates your own version of the :code:`assetra` repository. You will make changes to your fork and submit them for review to be added to the main :code:`assetra` repository.
 
 #. Clone your Fork Locally.
 
-    *. Navitage to the directory where you would like your clone to live.::
+    a. Navitage to the directory where you would like your clone to live.::
 
         git clone https://github.com/<your username>/assetra.git
 
@@ -27,7 +33,7 @@ Setup
 
     * Poetry is used to (1) manage virtual environments used to test development code, (2) maintain the :code:`pyproject.toml` file which defines package dependencies to be installed with :code:`assetra` by end-users, and (3) automate the process of building the :code:`assetra` package and publishing to pypi. When a contributor updates their environment (i.e. they install new or upgrade existing dependencies that need to be shipped with :code:`assetra`), they should commit their modifications to the :code:`pyproject.toml` and :code:`poetry.lock` files. Other contributors should then run `poetry install` to remain in sync.
 
-    #. Install pipx::
+    a. Install pipx::
 
         python3 -m pip install pipx
 
@@ -62,6 +68,7 @@ Contributor Workflow
 #. Follow these guidelines for contributions:
 '
     1. aa
+    
     #. bb
     
 #. Push local changes back to your fork on GitHub. Use your GitHub username and token if prompted for username and password.::
