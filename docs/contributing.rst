@@ -65,7 +65,7 @@ Contributor Workflow
 
 #. Create a branch in your fork to work on your contributions.
 
-#. Follow these guidelines when contributing::
+#. Follow these guidelines when contributing:
 
     1. Write at least one unit test for every function added or modified.
 
