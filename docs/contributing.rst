@@ -94,8 +94,6 @@ Contributor Workflow
 
 #. Open a pull request to :code:`ijbd/assetra` to submit your modifications for review.
 
-#. Once your changes have been merged, sync your fork to match :code:`ijbd/assetra` from GitHub.
-
 Reviewer Workflow
 -----------------
 
