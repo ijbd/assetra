@@ -33,11 +33,6 @@ Features
 * Object-oriented interface to manage energy units within energy systems
 * Internal computation stored in `xarray <https://docs.xarray.dev/en/stable/index.html>`_ datasets
 
-Future Work
------------
-* Regional interchange and transmission
-* Parallelized computation
-
 Credits
 -------
 This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
