@@ -65,17 +65,24 @@ Contributor Workflow
 
 #. Create a branch in your fork to work on your contributions.
 
-#. Follow these guidelines when contributing:
+#. Modify files. Follow these guidelines when contributing:
 
-    1. Write at least one unit test for every function added or modified.
-
-    #. Write at least one example for every new EnergyUnit added.
+    * For every function added or modified:
     
-    #. Run all unit tests. Ensure they run successfully.
+        a. Add at least one unit test.
+
+    #. For every new EnergyUnit added:
+     :code:`usage.rst`
+     
+        a. Add an example in the :code:`examples` folder. Include all data needed to run a working example, but be mindful of the file sizes.
+        
+        #. Update :code:`docs/reference.rst` to help others understand what you are modeling and what assumptions you make in your implementation.
+    
+#. Run all unit tests. Ensure they run successfully.
     
        python -m unittest
     
-#. Modify files and commit changes::
+#. Commit changes::
 
     git status # show files modified
     git add <files> # space-separated list of files modified to be committed.
@@ -87,7 +94,7 @@ Contributor Workflow
 
 #. Open a pull request to :code:`ijbd/assetra` to submit your modifications for review.
 
-#. Once your changes have been merged, sync your fork to match :code`ijbd/assetra` from GitHub.
+#. Once your changes have been merged, sync your fork to match :code:`ijbd/assetra` from GitHub.
 
 Reviewer Workflow
 -----------------
