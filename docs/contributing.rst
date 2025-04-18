@@ -56,7 +56,7 @@ Setup
 
     #. Test Installation::
 
-        poetry run python -m unnittest
+        poetry run python -m unittest
        
 Contributor Workflow
 --------------------
@@ -80,7 +80,7 @@ Contributor Workflow
     
 #. Run all unit tests. Ensure they run successfully.
     
-       python -m unittest
+       poetry run python -m unittest
     
 #. Commit changes::
 
