@@ -118,7 +118,8 @@ class EnergySystem:
 
             if dataset_file.exists():
                 LOG.info("Found unit dataset: " + str(dataset_file.resolve()))
-                self._unit_datasets[unit_type] = xr.open_dataset(dataset_file)
+                with xr.open_dataset(dataset_file) as ds:
+                    self._unit_datasets[unit_type] = ds.load()
 
 
 class EnergySystemBuilder:

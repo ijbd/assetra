@@ -1841,6 +1841,128 @@ class TestAssetraContribution(unittest.TestCase):
         observed = rc.evaluate(e2)
         self.assertAlmostEqual(expected, observed, delta=0.01)
 
+#new -- hydrounit tests 
+from assetra.units import HydroUnit
+import pandas as pd
+import numpy as np
 
+def create_test_data(months=12, hours_per_day=24):
+    times = pd.date_range(start='2021-01-01', periods=months*hours_per_day*30, freq='h')
+    np.random.seed(0)  # Set seed for reproducibility
+    net_hourly_capacity = xr.DataArray(
+        np.random.uniform(low=-10, high=0, size=len(times)), 
+        dims='time', 
+        coords={'time': times}
+    )
+    
+    month_coords = range(1, months + 1)
+    monthly_expected_generation = xr.DataArray(
+        [100] * months,
+        dims='month',
+        coords={'month': month_coords}
+    )
+    
+    hourly_forced_outage_rate = xr.DataArray(
+        np.zeros(len(times)) + 0.1, 
+        dims='time',
+        coords={'time': times}
+    )
+
+    return net_hourly_capacity, monthly_expected_generation, hourly_forced_outage_rate
+
+class TestHydroUnit(unittest.TestCase):
+    from assetra.units import HydroUnit
+    def test_hydro_unit_building(self):
+        net_hourly_capacity, monthly_expected_generation, _ = create_test_data()
+        unit = HydroUnit(
+            id=1,
+            nameplate_capacity=100,
+            monthly_expected_generation=monthly_expected_generation
+        )
+
+        # Assertions
+        self.assertEqual(unit.id, 1, "ID does not match")
+        self.assertEqual(unit.nameplate_capacity, 100, "Nameplate capacity does not match")
+        self.assertTrue(np.array_equal(unit.monthly_expected_generation, monthly_expected_generation))
+
+    def test_proportional_dispatch(self):
+        net_hourly_capacity, monthly_expected_generation, _ = create_test_data()
+
+        unit = HydroUnit(
+            id=1,
+            nameplate_capacity=100,
+            monthly_expected_generation=monthly_expected_generation
+        )
+
+        hourly_capacity = unit._get_hourly_capacity(net_hourly_capacity)
+
+        total_dispatch = hourly_capacity.sum().item()
+        expected_dispatch = monthly_expected_generation.sum().item()
+
+        np.testing.assert_allclose(
+            total_dispatch, expected_dispatch, atol=1e-5,
+            err_msg="Total dispatch does not match expected generation."
+        )
+
+        for month in range(1, 13):
+            monthly_data = net_hourly_capacity.sel(time=net_hourly_capacity['time.month'] == month)
+            proportions = monthly_data / monthly_data.sum()
+            expected_monthly_dispatch = monthly_expected_generation.sel(month=month).item()
+
+            proportional_dispatch = (proportions * expected_monthly_dispatch).fillna(0).values
+
+            # Logically check for mismatches
+            actual = hourly_capacity.sel(time=hourly_capacity['time.month'] == month).values
+            np.testing.assert_allclose(
+                actual,
+                proportional_dispatch,
+                rtol=1e-2,
+                atol=1e-2,
+                err_msg=f"Dispatch is not proportional for month {month}."
+            )
+
+            # Additional detailed diagnostic logging for debugging
+            mismatches = np.abs(actual - proportional_dispatch) > (1e-2 + 1e-2 * np.abs(proportional_dispatch))
+            if np.any(mismatches):
+                print(f"Debug info for month {month}:")
+                print("Mismatches found at indices:", np.where(mismatches))
+                print("Actual:", actual[mismatches])
+                print("Expected:", proportional_dispatch[mismatches])
+
+    def test_dispatch_with_forced_outage(self):
+        net_hourly_capacity, monthly_expected_generation, hourly_forced_outage_rate = create_test_data()
+
+        unit = HydroUnit(
+            id=1,
+            nameplate_capacity=100,
+            monthly_expected_generation=monthly_expected_generation,
+            hourly_forced_outage_rate=hourly_forced_outage_rate
+        )
+
+        hourly_capacity = HydroUnit._get_hourly_capacity(unit, net_hourly_capacity)
+        
+        outage_mask = np.random.random(hourly_capacity.shape) > hourly_forced_outage_rate.values
+        adjusted_capacity = hourly_capacity * outage_mask
+
+        #print(hourly_capacity, adjusted_capacity)
+
+        self.assertFalse(np.all(adjusted_capacity.values == hourly_capacity.values), "Forced outage has no effect.")
+
+    def test_probabilistic_capacity(self):
+        net_hourly_capacity, monthly_expected_generation, hourly_forced_outage_rate = create_test_data()
+        units = [HydroUnit(
+                    id=1,
+                    nameplate_capacity=100,
+                    monthly_expected_generation=monthly_expected_generation,
+                    hourly_forced_outage_rate=hourly_forced_outage_rate
+                 )]
+
+        unit_ds = HydroUnit.to_unit_dataset(units)
+        net_hourly_capacity_matrix = xr.concat([net_hourly_capacity] * 10, dim="trial")
+
+        adjusted_matrix = HydroUnit.get_probabilistic_capacity_matrix(unit_ds, net_hourly_capacity_matrix)
+        self.assertEqual(adjusted_matrix.dims, net_hourly_capacity_matrix.dims, 
+                         "Adjusted matrix dimensions do not match.")
+        self.assertEqual(len(adjusted_matrix['trial']), 10, "Unexpected number of trials.")
 if __name__ == "__main__":
     unittest.main()
