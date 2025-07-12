@@ -1847,6 +1847,29 @@ import pandas as pd
 import numpy as np
 
 def create_test_data(months=12, hours_per_day=24):
+    """
+    Generate test data for hydropower unit simulation.
+
+    Creates synthetic time series data for testing hydro unit dispatch functions. Returns:
+        - net_hourly_capacity: Time series (hourly) of system's net available capacity, as a DataArray with random values from -10 to 0 for each hour.
+        - monthly_expected_generation: A monthly array with a constant value (100) for each month.
+        - hourly_forced_outage_rate: Time series (hourly) of forced outage rates (set at 0.1 for every hour).
+
+    Args:
+        months (int): Number of months for which the test data is generated.
+        hours_per_day (int): Number of hours in a day (default 24).
+
+    Returns:
+        net_hourly_capacity (xr.DataArray): Array of shape (time,), hourly, with random values from -10 to 0.
+        monthly_expected_generation (xr.DataArray): Array of shape (month,), with value 100.
+        hourly_forced_outage_rate (xr.DataArray): Array of shape (time,), with value 0.1.
+    
+    Example returned shapes for default arguments:
+        net_hourly_capacity: (months * hours_per_day * 30,)  # hours for 30 days per month
+        monthly_expected_generation: (months,)
+        hourly_forced_outage_rate: (months * hours_per_day * 30,)
+    """
+
     times = pd.date_range(start='2021-01-01', periods=months*hours_per_day*30, freq='h')
     np.random.seed(0)  # Set seed for reproducibility
     net_hourly_capacity = xr.DataArray(
@@ -1873,6 +1896,14 @@ def create_test_data(months=12, hours_per_day=24):
 class TestHydroUnit(unittest.TestCase):
     from assetra.units import HydroUnit
     def test_hydro_unit_building(self):
+        """
+        Test HydroUnit initialization and attribute assignment.
+
+        Ensures:
+            - The HydroUnit object can be constructed with the correct attributes.
+            - The id and nameplate_capacity are set as expected.
+            - The monthly_expected_generation property matches the input array.
+        """
         net_hourly_capacity, monthly_expected_generation, _ = create_test_data()
         unit = HydroUnit(
             id=1,
@@ -1886,6 +1917,15 @@ class TestHydroUnit(unittest.TestCase):
         self.assertTrue(np.array_equal(unit.monthly_expected_generation, monthly_expected_generation))
 
     def test_proportional_dispatch(self):
+        """
+        Test proportional hourly dispatch logic in HydroUnit.
+
+        Ensures:
+            - Total dispatched energy equals the sum of the expected monthly generation.
+            - Within each month, the hourly dispatched energy is proportional to net unmet demand.
+            - Dispatched energy per hour does not exceed expectations, and proportional allocation is followed.
+            - Provides debug info if mismatches are found for any month.
+        """
         net_hourly_capacity, monthly_expected_generation, _ = create_test_data()
 
         unit = HydroUnit(
@@ -1930,6 +1970,14 @@ class TestHydroUnit(unittest.TestCase):
                 print("Expected:", proportional_dispatch[mismatches])
 
     def test_dispatch_with_forced_outage(self):
+         """
+        Test effect of forced outages on hydro dispatch.
+
+        Ensures:
+            - When a forced outage rate is applied, the resulting dispatch is not identical to the
+              non-outaged version.
+            - Asserts at least some hours are affected (i.e., dispatch is reduced or zeroed).
+        """
         net_hourly_capacity, monthly_expected_generation, hourly_forced_outage_rate = create_test_data()
 
         unit = HydroUnit(
@@ -1949,6 +1997,14 @@ class TestHydroUnit(unittest.TestCase):
         self.assertFalse(np.all(adjusted_capacity.values == hourly_capacity.values), "Forced outage has no effect.")
 
     def test_probabilistic_capacity(self):
+        """
+        Test probabilistic dispatch matrix for hydro units.
+
+        Ensures:
+            - The returned matrix of dispatched energy has the expected dimensions, including 'trial'.
+            - The number of trials in the output matches the number of input scenarios (10 by default).
+            - Each trial/scenario runs independently.
+        """
         net_hourly_capacity, monthly_expected_generation, hourly_forced_outage_rate = create_test_data()
         units = [HydroUnit(
                     id=1,

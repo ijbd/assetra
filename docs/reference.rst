@@ -62,13 +62,14 @@ Assumptions
  - Probabilistic simulations dispatch unit datasets in order of type. The established order is *DemandUnit*, *StaticUnit*, *StochasticUnit*, *StorageUnit* [2]_.
 
 **Hydro Unit**
-   (NOTE: only works for 12 months at a time right now) 
- - Hydro units borrow much from the stoachastic unit but are initated with monthly generation profiles.  
- - Hydro units are instantiated with hourly forced outage rates and nameplate capacities.
- - Hourly capacity profiles of Hydro units are calculated by the unit based on net demand of units listed before the Hydro unit in NONRESPONSIVE_UNIT_TYPES. 
+   (NOTE: only works for 12 months at a time right now, cannot run for longer time blocks)  
+ - Hydro units borrow much from the stoachastic unit but are initated with monthly generation estimates.
+ - Monthly generation profiles are intended to be an estimate of total generation for a unit in every month of a 12 month cycle, based on EIA annual collection of  monthly generation reports from operational hydropower units. 
+ - The Hydro unit turns the monthly generation profile into an hourly capacity profile by distributing the monthly total across each hour of the month proprtional to the net demand remaining after the genertaion from units listed before the Hydron unit in NONRESPONDIVE_UNIT_TYPES are considered.   
+ - Hydro units are instantiated with hourly forced outage rates and nameplate capacities, and the net-demand-propotional capacity in each hour is limited by the nameplate capacity of the unit. 
  - Hydro unit outages are sampled independently in each hour.
- - Hydro units contribute zero capacity in hours where unit outages occur, otherwise they contribute their full hourly capacity.
- - Hydro units can be used to model individual hydropower plants or regional hydropower.
+ - Hydro units contribute zero capacity in hours where unit outages occur, otherwise they contribute their full hourly capacity as calculated from the propotional assignment of the monthly generation across all hours of the month.
+ - Hydro units can be used to model individual hydropower plants or regional hydropower. For larger systems, modeling a single regional hydropower unit that accounts for all generation potential in the area will significantly reduce program run time as opposed to modeling every genertaor separately. 
 Notes
 -----
 .. [1] Internally, we **try** to think of *EnergySystem* objects as immutable. There is no method to directly add, remove, or modify *EnergyUnit* objects to/from/in an *EnergySystem*. The reason for this is to make explicitly clear to users that higher level objects do not track the state of lower-level objects. For example, if a user wants to modify a system for which a probabilistic simulation has already been evaluated, it would be tedious to both recognize the system modification from the simulation object and preserve computation from the existing evaluation. Further, we want to make efficient use of data structures for larger simulations. For example, it is both time- and memory- efficient to operate on whole fleets of energy units via matrix operation rather than evaluating each unit individually. This also offers a straightforward path to future parallelization. On the other hand, it is important for users to modify systems, i.e. add or remove units at will, and it is convenient to think of energy units as individual conceptual objects (not as fleets). To summarize, the internal energy system model should be immutable and operate on fleets of energy units, while the external model should be modifiable and treat energy units as individual objects. The *EnergySystemBuilder* acts as a bridge between these two models, by initializing the *EnergySystem* with a list of `xarray <https://docs.xarray.dev/en/stable/index.html>`_ datasets representing immutable fleets.
