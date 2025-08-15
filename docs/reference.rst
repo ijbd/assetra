@@ -63,12 +63,12 @@ Assumptions
 
 **Hydro Unit**
    (NOTE: only works for 12 months at a time right now, cannot run for longer time blocks)  
- - Hydro units borrow much from the stoachastic unit but are initated with monthly generation estimates.
+ - Hydro units borrow much from the stochastic unit but are initiated with monthly generation estimates.
  - Monthly generation profiles are intended to be an estimate of total generation for a unit in every month of a 12 month cycle, based on EIA annual collection of  monthly generation reports from operational hydropower units. 
- - The Hydro unit turns the monthly generation profile into an hourly capacity profile by distributing the monthly total across each hour of the month proprtional to the net demand remaining after the genertaion from units listed before the Hydron unit in NONRESPONDIVE_UNIT_TYPES are considered.   
- - Hydro units are instantiated with hourly forced outage rates and nameplate capacities, and the net-demand-propotional capacity in each hour is limited by the nameplate capacity of the unit. 
+ - The Hydro Unit turns the monthly generation profile into an hourly capacity profile by distributing the monthly total across each hour of the month proportional to the net demand remaining after the generation from units listed before the Hydro Unit in NONRESPONSIVE_UNIT_TYPES are considered.   
+ - Hydro units are instantiated with hourly forced outage rates and nameplate capacities, and the net-demand-proportional capacity in each hour is limited by the nameplate capacity of the unit. 
  - Hydro unit outages are sampled independently in each hour.
- - Hydro units contribute zero capacity in hours where unit outages occur, otherwise they contribute their full hourly capacity as calculated from the propotional assignment of the monthly generation across all hours of the month.
+ - Hydro units contribute zero capacity in hours where unit outages occur, otherwise they contribute their full hourly capacity as calculated from the proportional assignment of the monthly generation across all hours of the month.
  - Hydro units can be used to model individual hydropower plants or regional hydropower. For larger systems, modeling a single regional hydropower unit that accounts for all generation potential in the area will significantly reduce program run time as opposed to modeling every genertaor separately. 
 Notes
 -----
