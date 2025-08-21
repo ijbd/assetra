@@ -1,5 +1,5 @@
  ---
-title: 'ASSETRA: A light-weight Python package for resource adequacy'
+title: 'ASSETRA: A Light-Weight Python Package for Resource Adequacy'
 tags:
   - Python
   - energy systems
@@ -10,74 +10,55 @@ authors:
   - name: Isaac Bromley-Dulfano
     orcid: 0000-0001-5868-6170
     affiliation: 1 
-  - name: Srihari Sundar
-    affiliation: 2
+  - name: Martha Christino
+    orcid: 0009-0000-9767-2978
+    affilation: "2, 3"
   - name: Michael Craig
     corresponding: true #TODO
-    affiliation: "3, 4"
+    orcid: 0000-0002-3031-5041
+    affiliation: "4, 5"
+  - name: Srihari Sundar
+    affiliation: 6
 affiliations:
  - name: Research Assistant, School for Environment and Sustainability, University of Michigan, USA
    index: 1
  - name: PhD Candidate, School for Environment and Sustainability, University of Michigan, USA
    index: 2
- - name: Assistant Professor, School for Environment and Sustainability, University of Michigan, USA
+ - name: PhD Candidate, Climate Science and Engineering, University of Michigan, USA
    index: 3
- - name: Assistant Professor, Industrial and Operations Engineering, University of Michigan, USA
+ - name: Professor, School for Environment and Sustainability, University of Michigan, USA
    index: 4
-date: 31 March 2023
+ - name: Professor, Industrial and Operations Engineering, University of Michigan, USA
+   index: 5
+ - name: National Renewable Energy Lab, Denver CO, USA  
+   index: 6 
+date: XX September 2025
 bibliography: paper.bib
 ---
 
 # Summary
 
-Understanding the resource adequacy of an energy system, or its ability to meet 
-demand across a range of uncertain operating conditions, is a critical task for
-research groups studying energy transition.
-Researchers in the Advancing Sustainable Systems through low-impact Energy 
-Technologies (ASSET) Lab and in institutions globally need usable research-
-grade tools to quantify resource adequacy as part of their multi-dimensional
-studies. The ASSET lab resource adequacy package (`assetra`) seeks to meet this 
-need, with the overarching goal of quantifying the resource adequacy of energy 
-systems while being flexible, extensible, and easy-to-use for researchers. 
-In addition to providing a Monte Carlo simulation framework to quantify several
-common resource adequacy metrics, `assetra` also implements the effective
-load-carrying capability metric, which researchers can use to estimate the 
-resource adequacy contributions of a new resource to existing energy systems.
+One of the imperatives of power system planners and operators globally is to maximize power system reliability. As regulators modify existing practices for managing electrical grids in response to new technologies and climate change, they depend on reliability metrics to benchmark and set targets for the changing systems. Resource Adequacy (RA) refers to a set of reliability metrics which characterize the likelihood, frequency, and magnitude of “shortfall events”, or instances when demand exceeds available supply. RA analyses typically simulate the availability of generators across a range of operating conditions and compare the capacity profile with expected electrical demand. Researchers and practitioners need light-weight, flexible tools to incorporate RA within their research frameworks. The ASSET lab resource adequacy package (`assetra`) is an easy-to-use and extensible Python package that offers a concise and intuitive interface for constructing representations of energy systems, running probabilistic simulations, and evaluating a number of common resource adequacy metrics. Additionally, `assetra` implements the effective load-carrying capability metric, which estimates the resource adequacy contributions of new resources to an energy system. With these features, `assetra` offers researchers and practitioners a tool for maintaining system reliability while advancing decarbonization and climate adaptation.
 
-# Statement of need
 
-The `assetra` package is an xarray-based Python package for resource adequacy, 
-prioritizing simplicity and ease-of-use. The object-oriented interface offers 
-an intuitive bottom-up model of energy systems as a collection of energy units.
-Building on xarray means that energy systems and simulation artifacts are 
-stored in interpretable data structures, an unmistakable convenience for 
-developers and users alike. The development of `assetra` stems from a 2021 
-resource adequacy study by researchers in ASSET lab [@warp:2021]. The package 
-is primarily being developed for two classes of studies: those which require 
-novel methods unaccounted for in existing resource adequacy models, and those 
-which are not primarily concerned with resource adequacy but wish to include 
-resource adequacy as part of their multi-dimensional analyses. Consider two 
-potential applications. First, suppose a research group needs to integrate 
-demand response into their adequacy study (a topical application for the coming
-decade). Though demand response is not implemented in the `assetra` package, 
-researchers can define custom behavior for demand response by deriving from the 
-abstract `EnergyUnit` class, requiring the implementation of only three 
-functions. As another example, suppose a research group has successfully 
-modeled future hourly load predictions under likely scenarios of climate 
-change. They want to understand how climate change affects the resource 
-adequacy contributions of near-term solar and wind investments. Their 
-application does not require extension of `assetra`, but benefits primarily 
-from its consice interface. Analyses of both flavors are being undertaken by 
-researchers in ASSET Lab [TODO] and elsewhere [TODO]. With the joint 
-developments of energy transition and climate change adaptation, `assetra` 
-hopes to ease the mind of energy researchers, allowing them to focus less on 
-Python and more on policy/climate outcomes.
+# Statement of Need
 
-TODO add to bib WARP
-TODO cite/add to bib Reshmi
-TODO cite/add to bib Hari
-TODO cite/add to bib papers citing WARP for methods
+As electrification, transition to low-carbon energy sources, and changes in weather patterns from climate change occur simultaneously, understanding the changing resource adequacy of the electricity grid is vital. In 2021, Bromley-Dulfano et al. showed that most sub-regional planning authorities within the Western U.S. Interconnection could procure greater reliability benefits from renewable energy resources located outside of their planning jurisdiction compared to those within their planning jurisdiction [@warp21]. To conduct their analysis, the researchers developed a Python-based resource adequacy (RA) model to estimate the RA contributions of thousands of hypothetical solar, wind, and hybrid renewable-storage generating plants located across the entire interconnection to five power pools within the interconnection. While existing RA packages were available at the time, none accounted for temperature-dependent forced outage rates for thermal generators, which would better capture the range of operating conditions across wide geographic areas. Their methodology reflects a tighter coupling between resource adequacy and meteorological modeling, and the need for tools which cater to interdisciplinary researchers [@craig22] We, the developers of `assetra`, have redesigned their code base to prioritize simplicity and accessibility with continued commitment to creating software that allows for integration of resource adequacy and meteorological modeling.
+Existing RA packages include the Probabilistic Resource Adequacy Suite (PRAS), ProGRESS, and GridPath. PRAS, written in Julia, offers a sequential Monte Carlo simulation framework which includes approximations for inter-regional transmission and energy storage [@pras]. ProGRESS, written in Python, offers advanced modeling of energy storage devices within its probabilistic simulation framework [@progress]. GridPath, also written in Python, embeds RA within a larger modeling framework that includes RA, capacity expansion, production cost, and asset valuation [@gridpath]. The key features which differentiate `assetra` from existing RA packages are the following:
+We use Xarray data structures for all input and internal data structures.
+We provide an interface for time-varying forced outage rates, which, coupled with weather data, can be used to capture temperature-dependent forced outage rates.
+We define concise base classes to enable efficient development of custom technologies and resource adequacy metrics.
+
+In an evolving power system, quantifying resource adequacy, including tail risks and uncertainty, is vital [@epri24]. This process requires a highly interpretable methodology that enables researchers to analyze detailed statistics across numerous simulations. `assetra` stores simulation results for a large sample of Monte Carlo trials in Xarray. Xarray organizes these results into data structures indexed by trial number and pandas datetime objects, thereby facilitating the interpretation of patterns in resource adequacy failures. Xarray was developed for use in the meteorological community, and allows for easy integration of climate data into `assetra` simulations [@xarray]. Its capabilities in lazy loading and efficient memory handling, based on NumPy, minimize memory overhead, enabling the processing of hundreds of simulations with hourly weather data. `assetra` also leverages Xarray's in-place operations to compute standard resource adequacy metrics for basic users, while providing researchers and developers with the flexibility to explore risks and uncertainties through more innovative approaches. 
+
+Resource adequacy modeling is often complex, computationally challenging, and lacks flexibility [@esig20] [@esig24]. However, increasing levels of wind, solar, and storage technologies, along with evolving demand patterns, mean that our resource adequacy models must capture the reliability contributions of a diverse array of resources [@esig20]. The `assetra` package employs a bottom-up approach to understanding resource adequacy, beginning with the individual `EnergyUnit` objects that constitute the system. Simple abstract base classes and class interfaces streamline data management complexity and enable customization to address specific research questions. The incorporated `StochasticUnit` and `StaticUnit` offer versatility to represent any generation technology, from data centers utilizing demand response programs to large wind farms.The `StorageUnit` and `HydroUnit` serve as heuristic-based units that respond to system net capacity, enabling researchers to explore how modifications to standard behaviors of these units could impact future reliability. Our object-oriented approach grants researchers the flexibility to customize specific aspects of their resource adequacy testing, such as adding new EnergyUnits or modifying probabilistic simulation methods, without needing to duplicate or alter the existing framework.
+
+A key area of resource adequacy research rests in climate change threats to power system reliability [@hari23]. The `assetra` package works to contribute to this ongoing research by capturing impacts of temperature on forced outages rates and allowing researchers to implement location-specific capacity factors for renewable resource generation. This requires the creation of `EnergyUnits` with time-varying capacity availability based on weather profiles. Researchers can define generators in `assetra` with a nameplate capacity, an array of hourly maximum capacity, and a parallel array of hourly forced outage rates. Through pre-processing, both the hourly forced outages rates and renewable capacity factors can be created to account for the impact of temperature changes on power systems operations [@hari24]. 
+
+The `assetra` package provides a method for quantifying the impact of potential investments on resource adequacy. `assetra` iteratively evaluates the amount of load a new resource can serve while maintaining the reliability level of a base system, by storing and re-using probabilistic simulation data. Efficiently calculating reliability contributions of potential investments enables researchers to broaden the scope of their analyses [@warp21]. The provided framework can be customized to evaluate user-defined resource adequacy metrics or assess the reliability contributions of multiple, simultaneous investments.
+
+By prioritizing simplicity and accessibility, the `assetra` package aims to redirect the focus of energy researchers to addressing policy and climate outcomes. Currently, researchers in the ASSET lab are using `assetra` to model climate change impacts on reliability in the Western United States, incorporating aspects of resource adequacy into capacity expansion planning, and testing the resource adequacy benefit of building adaptation strategies in a regional context. By offering a flexible and lightweight object-oriented framework, `assetra` empowers researchers to model resource adequacy with ease and clarity, accommodating unique research needs through straight-forward customization and integration. Whether addressing the challenges of novel methods or enhancing existing analysis frameworks, `assetra` provides a powerful tool for understanding the impacts of climate change and future investments on power system reliability. 
 
 # Acknowledgements
 
-We acknowledge Julian Florez, Reshmi Ghosh, and Pamela Wildstein, whose contributions to resource adequacy tools in the ASSET Lab inspired this work. This project was funded by #TODO
+We acknowledge Julian Florez, Reshmi Ghosh, and Pamela Wildstein, whose contributions to resource adequacy tools in the ASSET Lab inspired this work. This project was funded by NSF Grant No. 2142421, NSF Grant DGE 2241144, University of Michigan School for Environment and Sustainability, University of Michigan Undergradute Research Oppurtunity Program, and the University of Michigan Institue for Energy Solutions. 
