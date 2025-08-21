@@ -107,7 +107,11 @@ Reviewer Workflow
 
 #. Run new/modified examples.
 
-#. Request changes or accept the pull request.
+#. Request changes, if needed.
+
+#. Confirm pull request will close relevant issues.
+
+#. Accept the pull request.
 
 #. Release the new code:
 
