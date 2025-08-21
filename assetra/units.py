@@ -636,11 +636,186 @@ class DemandUnit(StaticUnit):
             self, id, nameplate_capacity=0, hourly_capacity=-hourly_demand
         )
 
+class HydroUnit(EnergyUnit):
+    """Derived energy unit class.
+
+    A hydro unit represents a hydropower generator that allocates its monthly
+    expected generation by dispatching proportionally to unmet demand in each hour,
+    subject to its nameplate capacity and (optionally) forced outages.
+
+    Args:
+        id (int): Unique identifying number.
+        nameplate_capacity (float): Nameplate capacity of the hydro unit in units of power.
+        monthly_expected_generation (xr.DataArray): Expected monthly generation, in units of energy,
+            as a DataArray with dimension (month).
+        hourly_forced_outage_rate (xr.DataArray, optional): Hourly forced outage rate as decimal percents,
+            as a DataArray with dimension (time) and datetime coordinates. Defaults to None.
+    """
+    
+    def __init__(self, id, nameplate_capacity, monthly_expected_generation, hourly_forced_outage_rate=None):
+        super().__init__(id, nameplate_capacity)
+        self.monthly_expected_generation = monthly_expected_generation
+        self.hourly_forced_outage_rate = hourly_forced_outage_rate
+
+    def _get_hourly_capacity(self, net_hourly_capacity: xr.DataArray) -> xr.DataArray:
+        """Calculate the hourly dispatchable capacity for the hydro unit for each hour.
+
+        Capacity is distributed proportionally to unmet demand among hours in the same month,
+        limited by nameplate capacity and the available monthly generation.
+
+        Args:
+            net_hourly_capacity (xr.DataArray): Net system capacity for each hour, with dimension (time).
+
+        Returns:
+            xr.DataArray: Hourly hydro capacity (same shape as net_hourly_capacity).
+        """
+        hourly_capacity = xr.zeros_like(net_hourly_capacity)
+        grouped = net_hourly_capacity.groupby('time.month')
+        
+        for month, data in grouped:
+            current_charge = float(self.monthly_expected_generation.sel(month=month, method='pad'))
+            total_monthly_net_capacity = data.where(data < 0).sum().item()
+
+            #print(f"Month: {month}, Current Charge: {current_charge}, Total Monthly Net Capacity: {total_monthly_net_capacity}")
+
+            if total_monthly_net_capacity == 0:
+                continue
+
+            for i, net_capacity in enumerate(data):
+                if net_capacity.item() >= 0:
+                    dispatch_amount = 0
+                else:
+                    proportion = net_capacity.item() / total_monthly_net_capacity
+                    dispatch_amount = proportion * current_charge
+                    dispatch_amount = min(dispatch_amount, self.nameplate_capacity)
+                hourly_capacity.loc[data.time[i]] = dispatch_amount
+
+                #print(f"Time: {data.time[i]}, Net Capacity: {net_capacity.item()}, Dispatch Amount: {dispatch_amount}")
+
+            #print(f"Hourly Capacity for month {month}: {hourly_capacity.loc[data.time]}")
+        return hourly_capacity
+
+    @staticmethod
+    def to_unit_dataset(units: list["HydroUnit"]) -> xr.Dataset:
+        """Convert a list of hydro units into an xarray dataset.
+
+        Args:
+            units (list[HydroUnit]): List of hydro units.
+
+        Returns:
+            xr.Dataset: Dataset storing sufficient information to reconstruct the list of hydro units,
+                including nameplate capacity, monthly expected generation, and, if present,
+                hourly forced outage rates.
+        """
+        months = np.arange(1, 13) #only works for one year at a time 
+        hourly_time = units[0].hourly_forced_outage_rate.time if units[0].hourly_forced_outage_rate is not None else None
+        
+        dataset = xr.Dataset({
+            "nameplate_capacity": (["energy_unit"], [unit.nameplate_capacity for unit in units]),
+            "monthly_expected_generation": (["energy_unit", "month"], [unit.monthly_expected_generation.values for unit in units])
+        })
+
+        if hourly_time is not None:
+            dataset = dataset.assign_coords({"hourly_time": hourly_time})
+        
+        if any(unit.hourly_forced_outage_rate is not None for unit in units):
+            hourly_rates = [
+                unit.hourly_forced_outage_rate.values if unit.hourly_forced_outage_rate is not None else np.zeros(hourly_time.shape)
+                for unit in units
+            ]
+            dataset["hourly_forced_outage_rate"] = (["energy_unit", "hourly_time"], hourly_rates)
+        
+        dataset = dataset.assign_coords({"month": months})
+        #print(dataset)
+        return dataset
+
+    @staticmethod
+    def from_unit_dataset(unit_dataset: xr.Dataset) -> list["HydroUnit"]:
+        """Convert a hydro unit dataset to a list of hydro units.
+
+        This is the inverse to HydroUnit.to_unit_dataset function.
+
+        Args:
+            unit_dataset (xr.Dataset): Unit dataset with structure defined in HydroUnit.to_unit_dataset.
+
+        Returns:
+            list[HydroUnit]: List of hydro units.
+        """
+        units = []
+        for idx in range(len(unit_dataset.energy_unit)):
+            hourly_forced_outage_rate = None
+            if "hourly_forced_outage_rate" in unit_dataset:
+                hourly_forced_outage_rate = xr.DataArray(
+                    unit_dataset["hourly_forced_outage_rate"].isel(energy_unit=idx).values,
+                    dims=["time"],
+                    coords={"time": unit_dataset.hourly_time.values}
+                )
+                
+            monthly_coords = np.arange(1, 13) 
+            monthly_expected_generation = xr.DataArray(
+                unit_dataset["monthly_expected_generation"].isel(energy_unit=idx).values,
+                dims=["month"],
+                coords={"month": monthly_coords}
+            )
+
+            units.append(
+                HydroUnit(
+                    id=unit_dataset.energy_unit[idx].item(),
+                    nameplate_capacity=unit_dataset.nameplate_capacity[idx].item(),
+                    monthly_expected_generation=monthly_expected_generation,
+                    #hourly_forced_outage_rate=hourly_forced_outage_rate
+                )
+            )
+        return units
+
+    @staticmethod
+    def get_probabilistic_capacity_matrix(unit_dataset: xr.Dataset, net_hourly_capacity_matrix: xr.DataArray) -> xr.DataArray:
+        """Return probabilistic hourly capacity matrix for a hydro unit dataset.
+
+        For each hydro unit, simulate hourly capacity allocation in each trial,
+        optionally accounting for forced outages if an hourly outage rate is present.
+
+        Args:
+            unit_dataset (xr.Dataset): Hydro unit dataset, as generated by HydroUnit.to_unit_dataset.
+            net_hourly_capacity_matrix (xr.DataArray): Probabilistic net hourly capacity matrix
+                with dimensions (trial, time) and shape (#trials, #hours).
+
+        Returns:
+            xr.DataArray: Combined hourly capacity for all units in the unit dataset, with the same
+                dimensions and shape as net_hourly_capacity_matrix.
+        """
+        units = HydroUnit.from_unit_dataset(unit_dataset)
+        net_adj_hourly_capacity_matrix = net_hourly_capacity_matrix.copy()
+
+        for idx, unit in enumerate(units):
+            LOG.info("Dispatching hydro unit " + str(idx) + " of " + str(len(units)) + " in all hours")
+
+            for trial in range(net_adj_hourly_capacity_matrix.sizes['trial']):
+                net_capacity_trial = net_adj_hourly_capacity_matrix.isel(trial=trial)
+                
+                #print(f"Trial: {trial}, Net Hourly Capacity: {net_capacity_trial}")
+                if unit.hourly_forced_outage_rate is not None:
+                    outage_mask = np.random.random_sample(net_capacity_trial.shape) > unit.hourly_forced_outage_rate[:-1]
+                else:
+                    outage_mask = np.ones_like(net_capacity_trial)
+
+                available_capacity = unit._get_hourly_capacity(net_capacity_trial)
+
+                #print(f"Trial: {trial}, Available Capacity before outage: {available_capacity}")
+
+                adjusted_capacity = available_capacity * outage_mask
+
+                net_adj_hourly_capacity_matrix.loc[dict(trial=trial)] += adjusted_capacity
+
+                #print(f"Trial: {trial}, Adjusted Capacity after outage: {adjusted_capacity}")
+                #print(net_adj_hourly_capacity_matrix - net_hourly_capacity_matrix)
+        return net_adj_hourly_capacity_matrix - net_hourly_capacity_matrix 
+        
 
 # for successive simulations (e.g. ELCC), need to differentiate between
 # responsive and non-responsive units.
 #
 # these lists also serve to track all "valid" units that can be added
 # to an energy system
-NONRESPONSIVE_UNIT_TYPES = [DemandUnit, StaticUnit, StochasticUnit]
+NONRESPONSIVE_UNIT_TYPES = [DemandUnit, StaticUnit, HydroUnit, StochasticUnit]
 RESPONSIVE_UNIT_TYPES = [StorageUnit]
