@@ -107,9 +107,23 @@ Reviewer Workflow
 
 #. Run new/modified examples.
 
-#. Update the code version::
+#. Request changes, if needed.
 
-    a. Checkout the modified code
-    
-    #. bump the code version in the following locations.
+#. Confirm pull request will close relevant issues.
+
+#. Accept the pull request.
+
+#. Release the new code:
+
+    a. Bump the code version in :code:`assetra/__init__.py` and :code:`pyproject.toml`. Commit these changes.
+
+    #. Build the package::
+
+        poetry build
+
+    #. Publish package to pypi (requires pypi token)::
+
+        poetry publish --build
+
+
 
