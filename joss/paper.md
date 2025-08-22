@@ -1,4 +1,4 @@
- ---
+---
 title: 'ASSETRA: A Light-Weight Python Package for Resource Adequacy'
 tags:
   - Python
@@ -9,29 +9,29 @@ tags:
 authors:
   - name: Isaac Bromley-Dulfano
     orcid: 0000-0001-5868-6170
-    affiliation: 1 
+    affiliation: 1
   - name: Martha Christino
     orcid: 0009-0000-9767-2978
-    affilation: "2, 3"
+    affiliation: [2, 3]
   - name: Michael Craig
-    corresponding: true #TODO
+    corresponding: true
     orcid: 0000-0002-3031-5041
-    affiliation: "4, 5"
+    affiliation: [4, 5]
   - name: Srihari Sundar
     affiliation: 6
 affiliations:
- - name: Research Assistant, School for Environment and Sustainability, University of Michigan, USA
-   index: 1
- - name: PhD Candidate, School for Environment and Sustainability, University of Michigan, USA
-   index: 2
- - name: PhD Candidate, Climate Science and Engineering, University of Michigan, USA
-   index: 3
- - name: Professor, School for Environment and Sustainability, University of Michigan, USA
-   index: 4
- - name: Professor, Industrial and Operations Engineering, University of Michigan, USA
-   index: 5
- - name: National Renewable Energy Lab, Denver CO, USA  
-   index: 6 
+  - name: Research Assistant, School for Environment and Sustainability, University of Michigan, USA
+    index: 1
+  - name: PhD Candidate, School for Environment and Sustainability, University of Michigan, USA
+    index: 2
+  - name: PhD Candidate, Climate Science and Engineering, University of Michigan, USA
+    index: 3
+  - name: Professor, School for Environment and Sustainability, University of Michigan, USA
+    index: 4
+  - name: Professor, Industrial and Operations Engineering, University of Michigan, USA
+    index: 5
+  - name: National Renewable Energy Lab, Denver CO, USA
+    index: 6
 date: XX September 2025
 bibliography: paper.bib
 ---
