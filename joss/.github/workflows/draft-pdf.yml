@@ -1,6 +1,7 @@
-name: Draft PDF
+name: Draft PDF Self_Hosted
 on:
   workflow_dispatch:
+    push:
 
 jobs:
   paper:
