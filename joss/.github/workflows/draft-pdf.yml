@@ -4,7 +4,8 @@ on:
 
 jobs:
   paper:
-    runs-on: ubuntu-latest
+    # Need to siwtch to not private once repo is published and public 
+    runs-on: self-hosted
     name: Paper Draft
     steps:
       - name: Checkout
