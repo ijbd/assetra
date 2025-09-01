@@ -19,6 +19,7 @@ authors:
     affiliation: [1, 2, 4]
   - name: Srihari Sundar
     affiliation: 1
+    orcid: 0000-0002-0556-3967
 affiliations:
   - name: Center for Sustainable Systems, University of Michigan, Ann Arbor, MI, USA
     index: 1
