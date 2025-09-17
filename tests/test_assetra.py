@@ -1847,8 +1847,6 @@ import pandas as pd
 import numpy as np
 
 def create_test_data(months=12, hours_per_day=24):
-<<<<<<< HEAD
-=======
     """
     Generate test data for hydropower unit simulation.
 
@@ -1872,7 +1870,6 @@ def create_test_data(months=12, hours_per_day=24):
         hourly_forced_outage_rate: (months * hours_per_day * 30,)
     """
 
->>>>>>> 73b8211e82165f189d881956417be8b9d48acf99
     times = pd.date_range(start='2021-01-01', periods=months*hours_per_day*30, freq='h')
     np.random.seed(0)  # Set seed for reproducibility
     net_hourly_capacity = xr.DataArray(
@@ -1899,8 +1896,6 @@ def create_test_data(months=12, hours_per_day=24):
 class TestHydroUnit(unittest.TestCase):
     from assetra.units import HydroUnit
     def test_hydro_unit_building(self):
-<<<<<<< HEAD
-=======
         """
         Test HydroUnit initialization and attribute assignment.
 
@@ -1909,7 +1904,6 @@ class TestHydroUnit(unittest.TestCase):
             - The id and nameplate_capacity are set as expected.
             - The monthly_expected_generation property matches the input array.
         """
->>>>>>> 73b8211e82165f189d881956417be8b9d48acf99
         net_hourly_capacity, monthly_expected_generation, _ = create_test_data()
         unit = HydroUnit(
             id=1,
@@ -1923,8 +1917,6 @@ class TestHydroUnit(unittest.TestCase):
         self.assertTrue(np.array_equal(unit.monthly_expected_generation, monthly_expected_generation))
 
     def test_proportional_dispatch(self):
-<<<<<<< HEAD
-=======
         """
         Test proportional hourly dispatch logic in HydroUnit.
 
@@ -1934,7 +1926,6 @@ class TestHydroUnit(unittest.TestCase):
             - Dispatched energy per hour does not exceed expectations, and proportional allocation is followed.
             - Provides debug info if mismatches are found for any month.
         """
->>>>>>> 73b8211e82165f189d881956417be8b9d48acf99
         net_hourly_capacity, monthly_expected_generation, _ = create_test_data()
 
         unit = HydroUnit(
@@ -1979,8 +1970,6 @@ class TestHydroUnit(unittest.TestCase):
                 print("Expected:", proportional_dispatch[mismatches])
 
     def test_dispatch_with_forced_outage(self):
-<<<<<<< HEAD
-=======
          """
         Test effect of forced outages on hydro dispatch.
 
@@ -1989,7 +1978,6 @@ class TestHydroUnit(unittest.TestCase):
               non-outaged version.
             - Asserts at least some hours are affected (i.e., dispatch is reduced or zeroed).
         """
->>>>>>> 73b8211e82165f189d881956417be8b9d48acf99
         net_hourly_capacity, monthly_expected_generation, hourly_forced_outage_rate = create_test_data()
 
         unit = HydroUnit(
@@ -2009,8 +1997,6 @@ class TestHydroUnit(unittest.TestCase):
         self.assertFalse(np.all(adjusted_capacity.values == hourly_capacity.values), "Forced outage has no effect.")
 
     def test_probabilistic_capacity(self):
-<<<<<<< HEAD
-=======
         """
         Test probabilistic dispatch matrix for hydro units.
 
@@ -2019,7 +2005,6 @@ class TestHydroUnit(unittest.TestCase):
             - The number of trials in the output matches the number of input scenarios (10 by default).
             - Each trial/scenario runs independently.
         """
->>>>>>> 73b8211e82165f189d881956417be8b9d48acf99
         net_hourly_capacity, monthly_expected_generation, hourly_forced_outage_rate = create_test_data()
         units = [HydroUnit(
                     id=1,
