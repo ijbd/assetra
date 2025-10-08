@@ -9,7 +9,7 @@ ASSETRA
         :target: https://assetra.readthedocs.io/en/latest/?version=latest
         :alt: Documentation Status
 
-.. image:: https://github.com/mlchris18/assetra_edits/blob/paper_edits/.github/workflows/tests.yml/badge.svg  
+.. image:: https://github.com/mlchris18/assetra_edits/actions/workflows/tests.yml/badge.svg?branch=paper_edits  
     :target: https://github.com/mlchris18/assetra_edits/blob/paper_edits/.github/workflows/tests.yml
     :alt: Test status
 
