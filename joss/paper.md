@@ -9,26 +9,26 @@ tags:
 authors:
   - name: Isaac Bromley-Dulfano
     orcid: 0000-0001-5868-6170
-    affiliation: 1
+    affiliation: ["1"]
   - name: Martha Christino
     orcid: 0009-0000-9767-2978
-    affiliation: [1, 2, 3]
+    affiliation: ["1", "2", "3"]
   - name: Michael Craig
     corresponding: true
     orcid: 0000-0002-3031-5041
-    affiliation: [1, 2, 4]
+    affiliation: ["1", "2", "4"]
   - name: Srihari Sundar
-    affiliation: 1
+    affiliation: ["1"]
     orcid: 0000-0002-0556-3967
 affiliations:
   - name: Center for Sustainable Systems, University of Michigan, Ann Arbor, MI, USA
-    index: 1
+    id: "1"
   - name: School for Environment and Sustainability, University of Michigan, Ann Arbor, MI, USA
-    index: 2
+    id: "2"
   - name: Department of Climate and Space Sciences and Engineering, University of Michigan, Ann Arbor, MI, USA
-    index: 3
+    id: "3"
   - name: Department of Industrial and Operations Engineering, University of Michigan, Ann Arbor, MI, USA
-    index: 4
+    id: "4"
 date: XX September 2025
 bibliography: paper.bib
 ---
