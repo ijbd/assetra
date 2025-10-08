@@ -9,6 +9,9 @@ ASSETRA
         :target: https://assetra.readthedocs.io/en/latest/?version=latest
         :alt: Documentation Status
 
+.. image:: https://github.com/ijbd/assetra/actions/workflows/tests.yml/badge.svg
+    :target: https://github.com/ijbd/assetra/actions/workflows/tests.yml
+    :alt: Test status
 
 The ASSET Lab Resource adequacy package (assetra) is a light-weight, open-source energy system resource adequacy package maintained by the University of Michigan ASSET Lab.
 
