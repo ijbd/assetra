@@ -1970,7 +1970,7 @@ class TestHydroUnit(unittest.TestCase):
                 print("Expected:", proportional_dispatch[mismatches])
 
     def test_dispatch_with_forced_outage(self):
-         """
+        """
         Test effect of forced outages on hydro dispatch.
 
         Ensures:
@@ -1979,7 +1979,7 @@ class TestHydroUnit(unittest.TestCase):
             - Asserts at least some hours are affected (i.e., dispatch is reduced or zeroed).
         """
         net_hourly_capacity, monthly_expected_generation, hourly_forced_outage_rate = create_test_data()
-
+        
         unit = HydroUnit(
             id=1,
             nameplate_capacity=100,
