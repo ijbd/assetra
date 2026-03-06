@@ -656,9 +656,9 @@ class HydroUnit(EnergyUnit):
         super().__init__(id, nameplate_capacity)
         self.monthly_expected_generation = monthly_expected_generation
         self.hourly_forced_outage_rate = hourly_forced_outage_rate
-
+        
     def _get_hourly_capacity(self, net_hourly_capacity: xr.DataArray) -> xr.DataArray:
-        """Calculate the hourly dispatchable capacity for the hydro unit for each hour.
+         """Calculate the hourly dispatchable capacity for the hydro unit for each hour.
 
         Capacity is distributed proportionally to unmet demand among hours in the same month,
         limited by nameplate capacity and the available monthly generation.
@@ -669,31 +669,48 @@ class HydroUnit(EnergyUnit):
         Returns:
             xr.DataArray: Hourly hydro capacity (same shape as net_hourly_capacity).
         """
-        hourly_capacity = xr.zeros_like(net_hourly_capacity)
-        grouped = net_hourly_capacity.groupby('time.month')
+        #Convert to numpy 
+        net_capacity_values = net_hourly_capacity.values
+        hourly_capacity_values = np.zeros_like(net_capacity_values)
         
-        for month, data in grouped:
+        #Get months as numpy array
+        months = net_hourly_capacity.time.dt.month.values
+        unique_months = np.unique(months)
+        
+        for month in unique_months:
+            # Boolean mask for this month
+            month_mask = months == month
+            month_data = net_capacity_values[month_mask]
+            
+            # Get current charge
             current_charge = float(self.monthly_expected_generation.sel(month=month, method='pad'))
-            total_monthly_net_capacity = data.where(data < 0).sum().item()
-
-            #print(f"Month: {month}, Current Charge: {current_charge}, Total Monthly Net Capacity: {total_monthly_net_capacity}")
-
+            
+            # Calculate total monthly net capacity (sum of negative values)
+            total_monthly_net_capacity = month_data[month_data < 0].sum()
+            
             if total_monthly_net_capacity == 0:
                 continue
+            
+            # Vectorized calculation
+            # Only calculate proportions for negative values
+            proportions = np.where(
+                month_data < 0,
+                month_data / total_monthly_net_capacity,
+                0
+            )
+            dispatch_amounts = proportions * current_charge
+            dispatch_amounts = np.minimum(dispatch_amounts, self.nameplate_capacity)
+            
+            hourly_capacity_values[month_mask] = dispatch_amounts
+        
 
-            for i, net_capacity in enumerate(data):
-                if net_capacity.item() >= 0:
-                    dispatch_amount = 0
-                else:
-                    proportion = net_capacity.item() / total_monthly_net_capacity
-                    dispatch_amount = proportion * current_charge
-                    dispatch_amount = min(dispatch_amount, self.nameplate_capacity)
-                hourly_capacity.loc[data.time[i]] = dispatch_amount
+        # Convert back to xarray once
+        return xr.DataArray(
+            hourly_capacity_values,
+            coords=net_hourly_capacity.coords,
+            dims=net_hourly_capacity.dims
+        )
 
-                #print(f"Time: {data.time[i]}, Net Capacity: {net_capacity.item()}, Dispatch Amount: {dispatch_amount}")
-
-            #print(f"Hourly Capacity for month {month}: {hourly_capacity.loc[data.time]}")
-        return hourly_capacity
 
     @staticmethod
     def to_unit_dataset(units: list["HydroUnit"]) -> xr.Dataset:
