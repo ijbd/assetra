@@ -2,9 +2,9 @@ name: Unit Tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, unittest_problem_plushydro]
   pull_request:
-    branches: [main]
+    branches: [main, unittest_problem_plushydro]
 
 jobs:
   test:
