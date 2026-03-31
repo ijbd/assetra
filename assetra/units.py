@@ -670,7 +670,7 @@ class HydroUnit(EnergyUnit):
             xr.DataArray: Hourly hydro capacity (same shape as net_hourly_capacity).
         """
         #use numpy to use a vectorized cauclation later 
-        net_capacity_values - net_hourly_capacity.values 
+        net_capacity_values = net_hourly_capacity.values 
         hourly_capacity_values = np.zero_like(net_capacity_values) 
 
         #get months as numpy array 
