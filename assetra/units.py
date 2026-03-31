@@ -669,7 +669,7 @@ class HydroUnit(EnergyUnit):
         Returns:
             xr.DataArray: Hourly hydro capacity (same shape as net_hourly_capacity).
         """
-        #use numpy to use a vectorized cauclation later 
+        #use numpy to use a vectorized calculation
         net_capacity_values = net_hourly_capacity.values 
         hourly_capacity_values = np.zeros_like(net_capacity_values) 
 
@@ -682,7 +682,7 @@ class HydroUnit(EnergyUnit):
             month_mask = months == month 
             month_data = net_capacity_values[month_mask]
             #get current charge 
-            current_charge = float(self.monthly_expected_generation.sel(month=moth, method = 'pad'))
+            current_charge = float(self.monthly_expected_generation.sel(month=month, method = 'pad'))
             #calculate total monthly net capacity 
             total_monthly_net_capacity = month_data[month_data <0].sum()   
             if total_monthly_net_capacity == 0:
