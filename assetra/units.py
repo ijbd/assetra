@@ -671,7 +671,7 @@ class HydroUnit(EnergyUnit):
         """
         #use numpy to use a vectorized cauclation later 
         net_capacity_values = net_hourly_capacity.values 
-        hourly_capacity_values = np.zero_like(net_capacity_values) 
+        hourly_capacity_values = np.zeros_like(net_capacity_values) 
 
         #get months as numpy array 
         months = net_hourly_capacity.time.dt.month.values 
