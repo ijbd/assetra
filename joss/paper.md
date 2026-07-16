@@ -10,7 +10,7 @@ authors:
   - name: Isaac Bromley-Dulfano
     orcid: 0000-0001-5868-6170
     affiliation: 1
-  - name: Martha Christino
+  - name: Martha Vierra
     orcid: 0009-0000-9767-2978
     affiliation: "1, 2, 3"
   - name: Michael Craig
