@@ -5,7 +5,7 @@
    :hidden:
 
    installation
-   usage
+   basic_use
    reference
    contributing
 

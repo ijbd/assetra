@@ -31,8 +31,22 @@ import assetra
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.napoleon', 'sphinx.ext.autodoc', 'sphinx.ext.viewcode']
+extensions = ['sphinx.ext.napoleon', 'sphinx.ext.autodoc', 'sphinx.ext.viewcode', 'nbsphinx', 'nbsphinx_link']
 autodoc_member_order = 'bysource'
+
+# --- nbsphinx Configuration ---
+# Options for nbsphinx_execute:
+# 'auto'  : Run notebook cells during build ONLY if the notebook has no pre-calculated outputs saved.
+# 'never' : Never run notebooks; only render saved cell outputs directly from .ipynb files.
+# 'always': Force re-executing all notebooks on every doc build.
+nbsphinx_execute = 'always'
+# Override the notebook's saved kernel so it uses standard python3
+nbsphinx_kernel_name = "python3"
+# Do not fail the documentation build if a notebook cell throws a minor warning
+nbsphinx_allow_errors = True
+
+# Max time allowed per notebook cell execution in seconds (helpful for simulation runs)
+nbsphinx_timeout = 300
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -48,8 +62,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'ASSETRA'
-copyright = "2022, Isaac Bromley-Dulfano, Srihari Sundar"
-author = "Isaac Bromley-Dulfano, Srihari Sundar"
+copyright = "2026, Isaac Bromley-Dulfano, Martha Vierra, Srihari Sundar, Michael Craig"
+author = "Isaac Bromley-Dulfano, Martha Vierra, Srihari Sundar, Michael Craig"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
@@ -70,7 +84,7 @@ language = 'en'
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '**.ipynb_checkpoints'] # <-- Ignores Jupyter auto-save checkpoint
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'

@@ -4,8 +4,9 @@ version = "2026.04.12"
 description = "ASSET Lab Resource Adequacy Package"
 authors = [
 	"Isaac Bromley-Dulfano <ijbd@umich.edu>",
-	"Martha Christino <mlchris@umich.edu>",
-	"Srihari Sundar <sriharis@umich.edu>"
+	"Martha Vierra <mlchris@umich.edu>",
+	"Srihari Sundar <sriharis@umich.edu>", 
+	"Michael Craig <mtcraig@umich.edu>"
 ]
 license = "MIT"
 readme = "README.rst"
@@ -14,6 +15,12 @@ readme = "README.rst"
 python = "^3.10"
 netCDF4 = "^1.7.2"
 xarray = "^2024.10.0"
+nbsphinx = "^0.9.0"
+
+[tool.poetry.group.docs.dependencies]
+nbsphinx-link = "^1.4.1"
+ipykernel = "^7.3.0"
+nbconvert = "^7.17.1"
 
 [build-system]
 requires = ["poetry-core"]
