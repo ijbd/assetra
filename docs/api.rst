@@ -12,3 +12,4 @@ Modules
    assetra.simulation
    assetra.metrics
    assetra.contribution
+   assetra.utils

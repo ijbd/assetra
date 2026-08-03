@@ -104,6 +104,26 @@ Choosing an Energy Unit Type
      - Battery and pumped hydro storage, dispatched with a greedy policy.
      - Charge/discharge capacity, energy capacity, efficiency
 
+Preparing Input Data
+--------------------
+Energy units accept hourly profiles as `xarray <https://docs.xarray.dev/en/stable/index.html>`_ *DataArray* objects with a single :code:`time` dimension and datetime coordinates. 
+This applies to every profile passed to a unit, including hourly capacity, hourly demand, and hourly forced outage rates. All units in a system must share a common time index, and the
+simulation period requested from a *ProbabilisticSimulation* must fall within it.
+Where a dataset already carries its own timestamps, it is usually clearest to construct the *DataArray* directly, so that the coordinates come from the source data rather than being assumed. 
+The :code:`assetra.utils` module provides a shortcut for the other common case, in which the data is a plain sequence of hourly values with no index attached:
+
+.. code-block:: python
+
+   from assetra.utils import get_hourly_time_series_xr
+
+   hourly_demand = get_hourly_time_series_xr(
+       [100.0] * 8760, start_hour="2019-01-01 00:00:00"
+   )
+
+The values are assumed to be consecutive and evenly spaced at one-hour intervals, with the first value corresponding to :code:`start_hour`. 
+The length of the input determines the length of the resulting time index, so a full non-leap year of hourly data is 8760 values. This helper is a convenience for formatting input data and is not part 
+of the resource adequacy model. Units are indifferent to how their profiles were constructed, provided the dimension and coordinates are correct.
+
 Dispatch Order
 --------------
 Units are not dispatched in the order they are added to the builder. They are dispatched by type, in a fixed order defined by the *RESPONSIVE_UNIT_TYPES* and *NONRESPONSIVE_UNIT_TYPES* variables 
@@ -122,8 +142,6 @@ The two units that are most impacted by dispatch order is the *HydroUnit* and *S
 The *HydroUnit* is considered non-responsive, as it does not charge and discharge like the *StorageUnit*. However, hourly dispatch of the *HydroUnit* is dependent on the net demand in the system after the units 
 preceding it in the *NONRESPONSIVE_UNIT_TYPES* list have been dispatched. The monthly generation profile for the *HydroUnit* is converted into an hourly capacity profile by distributing the 
 monthly total across each hour of the month proportional to the net demand remaining after the generation from units listed before the Hydro Unit in NONRESPONSIVE_UNIT_TYPES are considered. 
- 
-
 
 Assumptions
 -----------
@@ -158,6 +176,7 @@ Assumptions
  - Hydro unit outages are sampled independently in each hour.
  - Hydro units contribute zero capacity in hours where unit outages occur, otherwise they contribute their full hourly capacity as calculated from the proportional assignment of the monthly generation across all hours of the month.
  - Hydro units can be used to model individual hydropower plants or regional hydropower. For larger systems, modeling a single regional hydropower unit that accounts for all generation potential in the area will significantly reduce program run time as opposed to modeling every genertaor separately. 
+
 Notes
 -----
 .. [1] Internally, we **try** to think of *EnergySystem* objects as immutable. There is no method to directly add, remove, or modify *EnergyUnit* objects to/from/in an *EnergySystem*. The reason for this is to make explicitly clear to users that higher level objects do not track the state of lower-level objects. For example, if a user wants to modify a system for which a probabilistic simulation has already been evaluated, it would be tedious to both recognize the system modification from the simulation object and preserve computation from the existing evaluation. Further, we want to make efficient use of data structures for larger simulations. For example, it is both time- and memory- efficient to operate on whole fleets of energy units via matrix operation rather than evaluating each unit individually. This also offers a straightforward path to future parallelization. On the other hand, it is important for users to modify systems, i.e. add or remove units at will, and it is convenient to think of energy units as individual conceptual objects (not as fleets). To summarize, the internal energy system model should be immutable and operate on fleets of energy units, while the external model should be modifiable and treat energy units as individual objects. The *EnergySystemBuilder* acts as a bridge between these two models, by initializing the *EnergySystem* with a list of `xarray <https://docs.xarray.dev/en/stable/index.html>`_ datasets representing immutable fleets.
