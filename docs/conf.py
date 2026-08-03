@@ -103,9 +103,14 @@ html_theme = 'alabaster'
 # theme further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-    'logo' : 'asset-logo.png',
-    'fixed_sidebar' : True,
-    'sidebar_collapse' : True
+    'logo': 'asset-logo.png',
+    'fixed_sidebar': True,
+    'sidebar_collapse': True,
+    'github_user': 'ijbd',
+    'github_repo': 'assetra',
+    'github_button': True,
+    'github_type': 'star',
+    'github_banner': True,
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
