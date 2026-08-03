@@ -7,6 +7,7 @@
    installation
    basic_use
    reference
+   api
    contributing
 
 Indices

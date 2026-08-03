@@ -10,16 +10,37 @@ The ASSET lab resource adequacy package (assetra) seeks to meet this need, with 
 
 Interface Overview
 ------------------
-The assetra object-oriented interface is shown in figure 1 and is best interpreted as a bottom-up model. 
+The assetra interface is object-oriented and best interpreted as a bottom-up model: individual resources are collected into an energy system, the system is simulated probabilistically, 
+and the simulation is summarized by one or more resource adequacy metrics. Figure 1 shows the full class interface.
 
-*EnergyUnit* objects, such as demand centers and thermal generators, are added to the *EnergySystemBuilder*. 
+*EnergyUnits* are the building blocks of an `assetra` model. Each *EnergyUnit* represents a resource with an hourly capacity profile — a demand center, a thermal generator, a wind farm, a battery. 
+Units are added one at a time to an *EnergySystemBuilder*, which is responsible for managing them and assembling them into a system.
 
-The *EnergySystemBuilder* compiles energy units into *EnergySystem* objects (see [1]_ to understand the motivation for this distinction). 
+*EnergySystems* are produced by calling *build()* on the builder. The resulting *EnergySystem* is an immutable collection of unit fleets rather than of individual units (see [1]_ for the motivation behind this distinction). 
 
-*EnergySystem* objects are attached to *ProbabilisticSimulation* objects whose responsibility is to generate and store probabilistic net hourly capacity matrices for a large sample of Monte Carlo trials. The net hourly capacity matrix of a *ProbabilisticSimulation* is a two dimensional matrix representing net system capacity for each Monte Carlo iteration. 
-The net hourly capacity matrix of a *ProbabilisticSimulation* is a two dimensional matrix representing net system capacity (demand minus capacity) for each Monte Carlo iteration.
+*ProbabilisticSimulations* are where the Monte Carlo sampling happens. A *ProbabilisticSimulation* is instantiated with a start hour, an end hour, and a trial size, and is then assigned an 
+*EnergySystem*. Calling *run()* dispatches every unit in the system across every trial and populates the net hourly capacity matrix: a two dimensional matrix of net system capacity
+for each Monte Carlo iteration and each hour of the study period.
 
-*ProbabilisticSimulation* objects are attached to *ResourceAdequacyMetric* objects, who quantify resource adequacy, typically as a function of the net hourly capacity matrix.
+*ResourceAdequacyMetrics* turn the net capacity matrix produced by the *ProbabilisticSimulation* into reportvale values for your simualtion horizon.
+A *ResourceAdequacyMetric* is instantiated with a simulation object and evaluated with *evaluate()*. *ResourceAdequacyMetric* itself is an abstract base class; in practice users work with one of its concrete implementations:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+ 
+   * - Metric
+     - Quantifies
+   * - *ExpectedUnservedEnergy*
+     - Total energy not served over the study horizon.
+   * - *LossOfLoadHours*
+     - Expected number of hours with a shortfall over the study horizon.
+   * - *LossOfLoadDays*
+     - Expected number of days with at least one shortfall hour over the study horizon.
+   * - *LossOfLoadFrequency*
+     - Expected number of distinct shortfall events over the study horizon. 
+
+
 
 In addition to resource adequacy, the assetra package quantifies resource contribution of additional resources to an energy system, specifically with effective load-carrying capability (ELCC) metric. Per definition, an *EffectiveLoadCarryingCapability* object computes the resource adequacy of a base *EnergySystem*, and then iteratively finds the constant load that can be served by additional resources at the same base resource adequacy level. Because the computation of resource adequacy depends on both the simulation parameters and the selected resource adequacy metric, the *EffectiveLoadCarryingCapability* object is composed of a base energy system, as well as a *ProbabilisticSimulation* object and *ResourceAdequacyMetric* type. 
 
@@ -29,13 +50,80 @@ In addition to resource adequacy, the assetra package quantifies resource contri
 
    Figure 1: Class interface.
 
-Several of the core types in the assetra model are defined as abstract base classes. Abstract interfaces allow for interchangeability and enable users to extend functionality, for example, by creating custom unit types and resource adequacy metrics without modifying the simulation framework. See the usage page for an example. Figure 2 shows the abstract base classes and their derived types. 
+Several core types in assetra are abstract base classes. Abstract interfaces allow for interchangeability and let users extend functionality — creating custom unit types or resource adequacy metrics 
+without modifying the simulation framework. Figure 2 shows the abstract base classes and their derived types.
 
 .. figure:: _static/assetra-inherited-types.drawio.png
    :scale: 50 %
    :alt: assetra derived types
 
    Figure 2: Derived types used in the assetra model.
+
+Basic Workflow
+--------------
+A typical assetra study proceeds in two stages.
+ 
+**Stage 1: Build the energy system**
+ 
+1. Instantiate an *EnergySystemBuilder*.
+2. Add a *DemandUnit* carrying the hourly demand profile for the system.
+3. Add generating and storage capacity, choosing the unit type that matches each resource (see the table below).
+4. Call *build()* to produce an *EnergySystem*.
+ 
+**Stage 2: Simulate and evaluate**
+ 
+1. Instantiate a *ProbabilisticSimulation* with a start hour, end hour, and Monte Carlo trial size.
+2. Assign the energy system with *assign_energy_system()*.
+3. Call *run()* to populate the net hourly capacity matrix.
+4. Instantiate a resource adequacy metric with the simulation and call *evaluate()*.
+ 
+Optionally, pass a base system, a simulation, and a metric type to an *EffectiveLoadCarryingCapability* object to quantify the contribution of additional resources.
+
+Choosing an Energy Unit Type
+----------------------------
+.. list-table::
+   :header-rows: 1
+   :widths: 22 48 30
+ 
+   * - Unit type
+     - Use for
+     - Instantiated with
+   * - *DemandUnit*
+     - System demand. Treated identically to a static unit, but contributing negatively.
+     - Hourly demand profile
+   * - *StaticUnit*
+     - Resources that always contribute their full profile, with no outage sampling.
+     - Hourly capacity profile
+   * - *HydroUnit*
+     - Conventional hydro, either plant-level or aggregated regional hydro.
+     - Monthly generation totals, nameplate capacity, hourly forced outage rates
+   * - *StochasticUnit*
+     - Thermal, solar, and wind generators subject to forced outages.
+     - Hourly capacity profile, hourly forced outage rates
+   * - *StorageUnit*
+     - Battery and pumped hydro storage, dispatched with a greedy policy.
+     - Charge/discharge capacity, energy capacity, efficiency
+
+Dispatch Order
+--------------
+Units are not dispatched in the order they are added to the builder. They are dispatched by type, in a fixed order defined by the *RESPONSIVE_UNIT_TYPES* and *NONRESPONSIVE_UNIT_TYPES* variables 
+in the *assetra.units* module [2]_. This order can be edited by declaring new lists with the desired order for your specific use case. 
+The distinction is whether a unit's hourly capacity depends on full system conditions: responsive units dispatch last and alter output based on the net hourly capacity matrix.
+ 
+The effective order is:
+ 
+1. *DemandUnit* (non-responsive)
+2. *StaticUnit* (non-responsive)
+3. *HydroUnit* (non-responsive)
+4. *StochasticUnit* (non-responsive)
+5. *StorageUnit* (responsive)
+ 
+The two units that are most impacted by dispatch order is the *HydroUnit* and *StorageUnit*. The *StorageUnit* is dispatched last, after every other unit type and both charges and discharges based on the net hourly capacity matrix. 
+The *HydroUnit* is considered non-responsive, as it does not charge and discharge like the *StorageUnit*. However, hourly dispatch of the *HydroUnit* is dependent on the net demand in the system after the units 
+preceding it in the *NONRESPONSIVE_UNIT_TYPES* list have been dispatched. The monthly generation profile for the *HydroUnit* is converted into an hourly capacity profile by distributing the 
+monthly total across each hour of the month proportional to the net demand remaining after the generation from units listed before the Hydro Unit in NONRESPONSIVE_UNIT_TYPES are considered. 
+ 
+
 
 Assumptions
 -----------
@@ -76,13 +164,4 @@ Notes
 .. [2] The dispatch order of unit datasets in probabilistic simulations is defined by two variables in the *assetra.units* module, specifically *RESPONSIVE_UNIT_TYPES* and *NONRESPONSIVE_UNIT_TYPES*. These two variables are lists which both define valid energy unit types and distinguish the order of unit dispatch. The responsive/non-responsive nomenclature refers to whether the hourly capacity of units of a given type depend on system conditions. For example, *StaticUnit* and *StochasticUnit* qualify as non-responsive because their probabilistic hourly capacities do not depend on the net hourly capacity matrix. *StorageUnit* on the other hand qualifies as a responsive type. Dispatch order follows the combined list *(NONRESPONSIVE_UNIT_TYPES + RESPONSIVE_UNIT_TYPES)*.
 .. [3] Conventional hydroelectric units are not well-modeled by the existing `assetra` unit types. Depending on the application, it may be acceptable to treat hydroelectric as either a `StaticUnit` or `StochasticUnit`. The most appropriate model would likely modify the `StorageUnit` implementation to replace charge cycles with hydrological constraints.
 
-Modules
--------
-.. toctree::
-   :maxdepth: 3
 
-   assetra.units
-   assetra.system
-   assetra.simulation
-   assetra.metrics
-   assetra.contribution
