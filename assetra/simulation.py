@@ -34,6 +34,20 @@ class ProbabilisticSimulation:
         self._energy_system = None
         self._net_hourly_capacity_matrix = None
         self._hourly_capacity_matrix = None
+        
+    def __repr__(self) -> str:
+        if self._energy_system is None:
+            state = "no system assigned"
+        elif self._net_hourly_capacity_matrix is None:
+            state = "not run"
+        else:
+            state = "run"
+
+        return (
+            f"ProbabilisticSimulation("
+            f"start={self._start_hour}, end={self._end_hour}, "
+            f"trials={self._trial_size}, {state})"
+        )
 
     def copy(self) -> ProbabilisticSimulation:
         """Return a probabilistic simulation object with the same underlying
