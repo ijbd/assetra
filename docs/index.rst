@@ -5,8 +5,8 @@
    :hidden:
 
    installation
-   basic_use
    reference
+   basic_use
    api
    contributing
 
