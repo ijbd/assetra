@@ -46,21 +46,21 @@ Platform & Python Version Compatibility
 +------------------+-----------------+-----------------+-----------------+-----------------+
 | Operating System | Python 3.10     | Python 3.11     | Python 3.12     | Python 3.13     |
 +==================+=================+=================+=================+=================+
-| **Ubuntu**       | |ub-310|        | |ub-311|        | |ub-312|        | |ub-313|        |
+| **Ubuntu**       | |ubuntu_310|    | |ubuntu_311|    | |ubuntu_312|    | |ubuntu_313|    |
 +------------------+-----------------+-----------------+-----------------+-----------------+
-| **Windows**      | |win-310|       | |win-311|       | |win-312|       | |win-313|       |
+| **Windows**      | |windows_310|   | |windows_311|   | |windows_312|   | |windows_313|   |
 +------------------+-----------------+-----------------+-----------------+-----------------+
 
-.. |ub-310| image:: https://img.shields.io/badge/Python_3.10-passing-brightgreen?style=flat-square&logo=python&logoColor=white
-.. |ub-311| image:: https://img.shields.io/badge/Python_3.11-passing-brightgreen?style=flat-square&logo=python&logoColor=white
-.. |ub-312| image:: https://img.shields.io/badge/Python_3.12-passing-brightgreen?style=flat-square&logo=python&logoColor=white
-.. |ub-313| image:: https://img.shields.io/badge/Python_3.13-failing-red?style=flat-square&logo=python&logoColor=white
+.. |ubuntu_310| image:: https://img.shields.io/badge/Python_3.10-untested-yellow?style=flat-square&logo=python&logoColor=white
+.. |ubuntu_311| image:: https://img.shields.io/badge/Python_3.11-untested-yellow?style=flat-square&logo=python&logoColor=white
+.. |ubuntu_312| image:: https://img.shields.io/badge/Python_3.12-untested-yellow?style=flat-square&logo=python&logoColor=white
+.. |ubuntu_313| image:: https://img.shields.io/badge/Python_3.13-untested-yellow?style=flat-square&logo=python&logoColor=white
 
-.. |win-310| image:: https://img.shields.io/badge/Python_3.10-passing-brightgreen?style=flat-square&logo=python&logoColor=white
-.. |win-311| image:: https://img.shields.io/badge/Python_3.11-passing-brightgreen?style=flat-square&logo=python&logoColor=white
-.. |win-312| image:: https://img.shields.io/badge/Python_3.12-passing-brightgreen?style=flat-square&logo=python&logoColor=white
-.. |win-313| image:: https://img.shields.io/badge/Python_3.13-failing-red?style=flat-square&logo=python&logoColor=white
-        
+.. |windows_310| image:: https://img.shields.io/badge/Python_3.10-untested-yellow?style=flat-square&logo=python&logoColor=white
+.. |windows_311| image:: https://img.shields.io/badge/Python_3.11-untested-yellow?style=flat-square&logo=python&logoColor=white
+.. |windows_312| image:: https://img.shields.io/badge/Python_3.12-untested-yellow?style=flat-square&logo=python&logoColor=white
+.. |windows_313| image:: https://img.shields.io/badge/Python_3.13-untested-yellow?style=flat-square&logo=python&logoColor=white
+
 Credits
 -------
 This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.

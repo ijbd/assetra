@@ -56,4 +56,62 @@ jobs:
           git add .github/coverage.svg
           git diff --staged --quiet || git commit -m "Update coverage badge [skip ci]"
           git push
-        
+
+  update-matrix-badges:
+    name: Update README Matrix Badges
+    needs: test
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download test job results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const response = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+            });
+
+            let matrixStatus = {};
+            for (const job of response.data.jobs) {
+              if (job.name.includes('Python')) {
+                // Extracts "3.10", "3.11" etc. and "ubuntu-latest", "windows-latest"
+                const osMatch = job.name.includes('ubuntu') ? 'ubuntu' : 'windows';
+                const pyMatch = job.name.match(/3\.\d+/)[0];
+                const key = `${osMatch}_${pyMatch.replace('.', '')}`;
+                matrixStatus[key] = job.conclusion === 'success' ? 'passing-brightgreen' : 'failing-red';
+              }
+            }
+            fs.writeFileSync('matrix_status.json', JSON.stringify(matrixStatus));
+
+      - name: Update README.rst
+        run: |
+          python -c "
+          import json, re
+
+          with open('matrix_status.json') as f:
+              status = json.load(f)
+
+          with open('README.rst', 'r') as f:
+              content = f.read()
+
+          for key, state in status.items():
+              # Regex updates status color in badge image directives like .. |ub-310| image:: ...
+              pattern = rf'(\.\.\s+\|{key}\|\s+image::\s+https://img\.shields\.io/badge/Python_[0-9\.]+-)(passing-brightgreen|failing-red|untested-yellow)'
+              content = re.sub(pattern, rf'\1{state}', content)
+
+          with open('README.rst', 'w') as f:
+              f.write(content)
+          "
+
+      - name: Commit updated README.rst
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.rst
+          git diff --staged --quiet || git commit -m "Update platform matrix badges in README [skip ci]"
+          git push
