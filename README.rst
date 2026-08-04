@@ -43,23 +43,25 @@ Features
 Platform & Python Version Compatibility
 ---------------------------------------
 
-+------------------+-----------------+-----------------+-----------------+-----------------+
-| Operating System | Python 3.10     | Python 3.11     | Python 3.12     | Python 3.13     |
-+==================+=================+=================+=================+=================+
-| **Ubuntu**       | |ubuntu_310|    | |ubuntu_311|    | |ubuntu_312|    | |ubuntu_313|    |
-+------------------+-----------------+-----------------+-----------------+-----------------+
-| **Windows**      | |windows_310|   | |windows_311|   | |windows_312|   | |windows_313|   |
-+------------------+-----------------+-----------------+-----------------+-----------------+
++------------------+-----------------+-----------------+-----------------+-----------------+-----------------+
+| Operating System | Python 3.10     | Python 3.11     | Python 3.12     | Python 3.13     | Python 3.14     |
++==================+=================+=================+=================+=================+=================+
+| **Ubuntu**       | |ubuntu_310|    | |ubuntu_311|    | |ubuntu_312|    | |ubuntu_313|    | |ubuntu_314|    |
++------------------+-----------------+-----------------+-----------------+-----------------+-----------------+
+| **Windows**      | |windows_310|   | |windows_311|   | |windows_312|   | |windows_313|   | |windows_314|   |
++------------------+-----------------+-----------------+-----------------+-----------------+-----------------+
 
 .. |ubuntu_310| image:: https://img.shields.io/badge/Python_3.10-untested-yellow?style=flat-square&logo=python&logoColor=white
 .. |ubuntu_311| image:: https://img.shields.io/badge/Python_3.11-untested-yellow?style=flat-square&logo=python&logoColor=white
 .. |ubuntu_312| image:: https://img.shields.io/badge/Python_3.12-untested-yellow?style=flat-square&logo=python&logoColor=white
 .. |ubuntu_313| image:: https://img.shields.io/badge/Python_3.13-untested-yellow?style=flat-square&logo=python&logoColor=white
+.. |ubuntu_314| image:: https://img.shields.io/badge/Python_3.14-untested-yellow?style=flat-square&logo=python&logoColor=white
 
 .. |windows_310| image:: https://img.shields.io/badge/Python_3.10-untested-yellow?style=flat-square&logo=python&logoColor=white
 .. |windows_311| image:: https://img.shields.io/badge/Python_3.11-untested-yellow?style=flat-square&logo=python&logoColor=white
 .. |windows_312| image:: https://img.shields.io/badge/Python_3.12-untested-yellow?style=flat-square&logo=python&logoColor=white
 .. |windows_313| image:: https://img.shields.io/badge/Python_3.13-untested-yellow?style=flat-square&logo=python&logoColor=white
+.. |windows_314| image:: https://img.shields.io/badge/Python_3.14-untested-yellow?style=flat-square&logo=python&logoColor=white
 
 Credits
 -------
