@@ -16,6 +16,12 @@ ASSETRA
 .. image:: https://raw.githubusercontent.com/ijbd/assetra/main/.github/coverage.svg
     :target: https://github.com/ijbd/assetra/actions/workflows/tests.yml
     :alt: Test coverage
+### Platform & Python Version Compatibility
+
+| Operating System | Python 3.10 | Python 3.11 | Python 3.12 | Python 3.13 |
+| :--- | :---: | :---: | :---: | :---: |
+| **Ubuntu** | ![Ubuntu 3.10](https://img.shields.io/badge/Python_3.10-passing-brightgreen?style=flat-square&logo=python&logoColor=white) | ![Ubuntu 3.11](https://img.shields.io/badge/Python_3.11-passing-brightgreen?style=flat-square&logo=python&logoColor=white) | ![Ubuntu 3.12](https://img.shields.io/badge/Python_3.12-passing-brightgreen?style=flat-square&logo=python&logoColor=white) | ![Ubuntu 3.13](https://img.shields.io/badge/Python_3.13-failing-red?style=flat-square&logo=python&logoColor=white) |
+| **Windows** | ![Windows 3.10](https://img.shields.io/badge/Python_3.10-passing-brightgreen?style=flat-square&logo=python&logoColor=white) | ![Windows 3.11](https://img.shields.io/badge/Python_3.11-passing-brightgreen?style=flat-square&logo=python&logoColor=white) | ![Windows 3.12](https://img.shields.io/badge/Python_3.12-passing-brightgreen?style=flat-square&logo=python&logoColor=white) | ![Windows 3.13](https://img.shields.io/badge/Python_3.13-failing-red?style=flat-square&logo=python&logoColor=white) |
 
 The ASSET Lab Resource adequacy package (assetra) is a light-weight, open-source energy system resource adequacy package maintained by the University of Michigan ASSET Lab.
 
