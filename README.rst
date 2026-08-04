@@ -16,12 +16,6 @@ ASSETRA
 .. image:: https://raw.githubusercontent.com/ijbd/assetra/main/.github/coverage.svg
     :target: https://github.com/ijbd/assetra/actions/workflows/tests.yml
     :alt: Test coverage
-### Platform & Python Version Compatibility
-
-| Operating System | Python 3.10 | Python 3.11 | Python 3.12 | Python 3.13 |
-| :--- | :---: | :---: | :---: | :---: |
-| **Ubuntu** | ![Ubuntu 3.10](https://img.shields.io/badge/Python_3.10-passing-brightgreen?style=flat-square&logo=python&logoColor=white) | ![Ubuntu 3.11](https://img.shields.io/badge/Python_3.11-passing-brightgreen?style=flat-square&logo=python&logoColor=white) | ![Ubuntu 3.12](https://img.shields.io/badge/Python_3.12-passing-brightgreen?style=flat-square&logo=python&logoColor=white) | ![Ubuntu 3.13](https://img.shields.io/badge/Python_3.13-failing-red?style=flat-square&logo=python&logoColor=white) |
-| **Windows** | ![Windows 3.10](https://img.shields.io/badge/Python_3.10-passing-brightgreen?style=flat-square&logo=python&logoColor=white) | ![Windows 3.11](https://img.shields.io/badge/Python_3.11-passing-brightgreen?style=flat-square&logo=python&logoColor=white) | ![Windows 3.12](https://img.shields.io/badge/Python_3.12-passing-brightgreen?style=flat-square&logo=python&logoColor=white) | ![Windows 3.13](https://img.shields.io/badge/Python_3.13-failing-red?style=flat-square&logo=python&logoColor=white) |
 
 The ASSET Lab Resource adequacy package (assetra) is a light-weight, open-source energy system resource adequacy package maintained by the University of Michigan ASSET Lab.
 
@@ -46,6 +40,27 @@ Features
 * Object-oriented interface to manage energy units within energy systems
 * Internal computation stored in `xarray <https://docs.xarray.dev/en/stable/index.html>`_ datasets
 
+Platform & Python Version Compatibility
+---------------------------------------
+
++------------------+-----------------+-----------------+-----------------+-----------------+
+| Operating System | Python 3.10     | Python 3.11     | Python 3.12     | Python 3.13     |
++==================+=================+=================+=================+=================+
+| **Ubuntu**       | |ub-310|        | |ub-311|        | |ub-312|        | |ub-313|        |
++------------------+-----------------+-----------------+-----------------+-----------------+
+| **Windows**      | |win-310|       | |win-311|       | |win-312|       | |win-313|       |
++------------------+-----------------+-----------------+-----------------+-----------------+
+
+.. |ub-310| image:: https://img.shields.io/badge/Python_3.10-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |ub-311| image:: https://img.shields.io/badge/Python_3.11-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |ub-312| image:: https://img.shields.io/badge/Python_3.12-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |ub-313| image:: https://img.shields.io/badge/Python_3.13-failing-red?style=flat-square&logo=python&logoColor=white
+
+.. |win-310| image:: https://img.shields.io/badge/Python_3.10-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |win-311| image:: https://img.shields.io/badge/Python_3.11-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |win-312| image:: https://img.shields.io/badge/Python_3.12-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |win-313| image:: https://img.shields.io/badge/Python_3.13-failing-red?style=flat-square&logo=python&logoColor=white
+        
 Credits
 -------
 This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
