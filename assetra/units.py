@@ -334,8 +334,8 @@ class StochasticUnit(EnergyUnit):
         for id in unit_dataset.energy_unit:
             units.append(
                 StochasticUnit(
-                    id,
-                    unit_dataset.nameplate_capacity.loc[id],
+                    int(id),
+                    float(unit_dataset.nameplate_capacity.loc[id]),
                     unit_dataset.hourly_capacity.loc[id],
                     unit_dataset.hourly_forced_outage_rate.loc[id],
                 )

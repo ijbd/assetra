@@ -301,6 +301,7 @@ class TestAssetraUnits(unittest.TestCase):
         )
 
         # test
+        # initial_soc is unspecified above, so it defaults to 1.0
         expected = xr.Dataset(
             data_vars=dict(
                 nameplate_capacity=(["energy_unit"], [1, 2]),
@@ -308,6 +309,7 @@ class TestAssetraUnits(unittest.TestCase):
                 discharge_rate=(["energy_unit"], [2, 5]),
                 charge_capacity=(["energy_unit"], [3, 6]),
                 roundtrip_efficiency=(["energy_unit"], [0.8, 0.9]),
+                initial_soc=(["energy_unit"], [1.0, 1.0]),
             ),
             coords=dict(energy_unit=[1, 2]),
         )
@@ -326,6 +328,7 @@ class TestAssetraUnits(unittest.TestCase):
                 discharge_rate=(["energy_unit"], [2, 5]),
                 charge_capacity=(["energy_unit"], [3, 6]),
                 roundtrip_efficiency=(["energy_unit"], [0.8, 0.9]),
+                initial_soc=(["energy_unit"], [1.0, 1.0]),
             ),
             coords=dict(energy_unit=[1, 2]),
         )
@@ -335,6 +338,26 @@ class TestAssetraUnits(unittest.TestCase):
         expected = unit_dataset
         observed = StorageUnit.to_unit_dataset(units)
         self.assertTrue(observed.equals(expected))
+
+    def test_storage_dataset_to_list_without_initial_soc(self):
+        """Datasets saved before initial_soc existed should default to 1.0"""
+        from assetra.units import StorageUnit
+
+        # setup, omitting initial_soc as legacy saved systems do
+        unit_dataset = xr.Dataset(
+            data_vars=dict(
+                nameplate_capacity=(["energy_unit"], [1, 2]),
+                charge_rate=(["energy_unit"], [1, 4]),
+                discharge_rate=(["energy_unit"], [2, 5]),
+                charge_capacity=(["energy_unit"], [3, 6]),
+                roundtrip_efficiency=(["energy_unit"], [0.8, 0.9]),
+            ),
+            coords=dict(energy_unit=[1, 2]),
+        )
+
+        # test
+        units = StorageUnit.from_unit_dataset(unit_dataset)
+        self.assertEqual([unit.initial_soc for unit in units], [1.0, 1.0])
 
     def test_storage_probabilistic_capacity_over_discharge(self):
         """Storage unit should not discharge more than its current capacity."""
@@ -462,6 +485,74 @@ class TestAssetraUnits(unittest.TestCase):
             unit_dataset, net_capacity_matrix
         )
         self.assertTrue(expected.equals(observed))
+
+    def test_storage_partial_initial_soc(self):
+        """Storage unit discharges only the energy given by its initial SOC."""
+        from assetra.units import StorageUnit
+
+        # create unit holding 2 units of energy (50% of 4) at hour zero
+        unit = StorageUnit(
+            id=1,
+            nameplate_capacity=1,
+            charge_rate=1,
+            discharge_rate=1,
+            charge_capacity=4,
+            roundtrip_efficiency=1,
+            initial_soc=0.5,
+        )
+        unit_dataset = StorageUnit.to_unit_dataset([unit])
+
+        # create net capacity matrix
+        net_capacity_matrix = get_sample_net_capacity_matrix([[-1, -1, -1, -1]])
+
+        # test, discharging 1 unit of power for 2 hours before depleting
+        expected = get_sample_net_capacity_matrix([[1, 1, 0, 0]])
+        observed = StorageUnit.get_probabilistic_capacity_matrix(
+            unit_dataset, net_capacity_matrix
+        )
+        self.assertTrue(expected.equals(observed))
+
+    def test_storage_empty_initial_soc(self):
+        """Storage unit starting empty cannot discharge until it charges."""
+        from assetra.units import StorageUnit
+
+        # create unit
+        unit = StorageUnit(
+            id=1,
+            nameplate_capacity=1,
+            charge_rate=1,
+            discharge_rate=1,
+            charge_capacity=1,
+            roundtrip_efficiency=1,
+            initial_soc=0.0,
+        )
+        unit_dataset = StorageUnit.to_unit_dataset([unit])
+
+        # create net capacity matrix
+        net_capacity_matrix = get_sample_net_capacity_matrix([[-1, 1, -1, -1]])
+
+        # test, no discharge in hour zero since the unit starts empty
+        expected = get_sample_net_capacity_matrix([[0, -1, 1, 0]])
+        observed = StorageUnit.get_probabilistic_capacity_matrix(
+            unit_dataset, net_capacity_matrix
+        )
+        self.assertTrue(expected.equals(observed))
+
+    def test_storage_invalid_initial_soc(self):
+        """Initial SOC outside the range 0 to 1 should be rejected."""
+        from assetra.units import StorageUnit
+
+        for invalid_soc in (-0.1, 1.1):
+            with self.assertRaises(ValueError):
+                StorageUnit(
+                    id=1,
+                    nameplate_capacity=1,
+                    charge_rate=1,
+                    discharge_rate=1,
+                    charge_capacity=1,
+                    roundtrip_efficiency=1,
+                    initial_soc=invalid_soc,
+                )
 
 
 class TestAssetraSystem(unittest.TestCase):
