@@ -51,17 +51,17 @@ Platform & Python Version Compatibility
 | **Windows**      | |windows_310|   | |windows_311|   | |windows_312|   | |windows_313|   | |windows_314|   |
 +------------------+-----------------+-----------------+-----------------+-----------------+-----------------+
 
-.. |ubuntu_310| image:: https://img.shields.io/badge/Python_3.10-untested-yellow?style=flat-square&logo=python&logoColor=white
-.. |ubuntu_311| image:: https://img.shields.io/badge/Python_3.11-untested-yellow?style=flat-square&logo=python&logoColor=white
-.. |ubuntu_312| image:: https://img.shields.io/badge/Python_3.12-untested-yellow?style=flat-square&logo=python&logoColor=white
-.. |ubuntu_313| image:: https://img.shields.io/badge/Python_3.13-untested-yellow?style=flat-square&logo=python&logoColor=white
-.. |ubuntu_314| image:: https://img.shields.io/badge/Python_3.14-untested-yellow?style=flat-square&logo=python&logoColor=white
+.. |ubuntu_310| image:: https://img.shields.io/badge/Python_3.10-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |ubuntu_311| image:: https://img.shields.io/badge/Python_3.11-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |ubuntu_312| image:: https://img.shields.io/badge/Python_3.12-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |ubuntu_313| image:: https://img.shields.io/badge/Python_3.13-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |ubuntu_314| image:: https://img.shields.io/badge/Python_3.14-failing-red?style=flat-square&logo=python&logoColor=white
 
-.. |windows_310| image:: https://img.shields.io/badge/Python_3.10-untested-yellow?style=flat-square&logo=python&logoColor=white
-.. |windows_311| image:: https://img.shields.io/badge/Python_3.11-untested-yellow?style=flat-square&logo=python&logoColor=white
-.. |windows_312| image:: https://img.shields.io/badge/Python_3.12-untested-yellow?style=flat-square&logo=python&logoColor=white
-.. |windows_313| image:: https://img.shields.io/badge/Python_3.13-untested-yellow?style=flat-square&logo=python&logoColor=white
-.. |windows_314| image:: https://img.shields.io/badge/Python_3.14-untested-yellow?style=flat-square&logo=python&logoColor=white
+.. |windows_310| image:: https://img.shields.io/badge/Python_3.10-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |windows_311| image:: https://img.shields.io/badge/Python_3.11-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |windows_312| image:: https://img.shields.io/badge/Python_3.12-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |windows_313| image:: https://img.shields.io/badge/Python_3.13-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |windows_314| image:: https://img.shields.io/badge/Python_3.14-failing-red?style=flat-square&logo=python&logoColor=white
 
 Credits
 -------
