@@ -34,6 +34,23 @@ class EnergyUnit(ABC):
     id: int
     nameplate_capacity: float
 
+    def __post_init__(self):
+        # Enforce id as strictly int (and exclude bool, which is a subclass of int in Python)
+        if not isinstance(self.id, int) or isinstance(self.id, bool):
+            raise TypeError(
+                f"`id` must be an integer, got {type(self.id).__name__} ({self.id!r})"
+            )
+
+        # Allow nameplate_capacity to be float or int (convert ints to float internally)
+        if not isinstance(self.nameplate_capacity, (float, int)) or isinstance(self.nameplate_capacity, bool):
+            raise TypeError(
+                f"`nameplate_capacity` must be a float or int, got {type(self.nameplate_capacity).__name__} ({self.nameplate_capacity!r})"
+            )
+
+        # Cast int to float for consistency if an integer capacity was passed (e.g., 50 -> 50.0)
+        if not isinstance(self.nameplate_capacity, float):
+            object.__setattr__(self, "nameplate_capacity", float(self.nameplate_capacity))
+
     @staticmethod
     @abstractmethod
     def to_unit_dataset(units: list[EnergyUnit]) -> xr.Dataset:
@@ -118,6 +135,13 @@ class StaticUnit(EnergyUnit):
     """
 
     hourly_capacity: xr.DataArray
+
+    def __post_init__(self):
+        super().__post_init__()  # Runs base class checks (id, nameplate_capacity)
+        
+        # Extra check for StaticUnit's own attribute:
+        if not isinstance(self.hourly_capacity, xr.DataArray):
+            raise TypeError("`hourly_capacity` must be an xarray DataArray")
 
     @staticmethod
     def to_unit_dataset(units: list[StaticUnit]) -> xr.Dataset:
@@ -243,6 +267,16 @@ class StochasticUnit(EnergyUnit):
 
     hourly_capacity: xr.DataArray
     hourly_forced_outage_rate: xr.DataArray
+
+    def __post_init__(self):
+        super().__post_init__()  # Runs base class checks (id, nameplate_capacity)
+        
+        # Extra check for Stochastic Unit's own attribute:
+        if not isinstance(self.hourly_capacity, xr.DataArray):
+            raise TypeError("`hourly_capacity` must be an xarray DataArray")
+
+        if not isinstance(self.hourly_forced_outage_rate, xr.DataArray):
+            raise TypeError("`hourly_forced_outage_rate` must be an xarray DataArray")
 
     @staticmethod
     def to_unit_dataset(units: list[StochasticUnit]):
@@ -404,12 +438,44 @@ class StorageUnit(EnergyUnit):
         discharge_rate (float) : Discharge rate in units of power
         charge_capacity (float) : Maximum charge capacity in units of energy
         roundtrip_efficiency (float) : Roundtrip efficiency as decimal percent
+        initial_soc(float, optional): Initial state of charge as a fraction between 0.0 and 1.0. Defaults to 1.0.
     """
 
     charge_rate: float
     discharge_rate: float
     charge_capacity: float
     roundtrip_efficiency: float
+    initial_soc: float = 1.0  # Default to fully charged if not specified
+
+    def __post_init__(self):
+        super().__post_init__()  # Runs base class checks (id, nameplate_capacity)
+        
+        # Validate and cast all child scalar fields to float
+        float_fields = (
+            "charge_rate",
+            "discharge_rate",
+            "charge_capacity",
+            "roundtrip_efficiency",
+            "initial_soc",
+        )
+
+        for field_name in float_fields:
+            val = getattr(self, field_name)
+
+            if not isinstance(val, (float, int)) or isinstance(val, bool):
+                raise TypeError(
+                    f"`{field_name}` must be a float or int, got {type(val).__name__} ({val!r})"
+                )
+
+            # Cast to float internally for uniform typing
+            if not isinstance(val, float):
+                object.__setattr__(self, field_name, float(val))
+
+        # Check fraction bounds for initial_soc
+        if not (0.0 <= self.initial_soc <= 1.0):
+            raise ValueError(
+                f"`initial_soc` must be between 0.0 and 1.0, got {self.initial_soc}"
+            )
 
     def _get_hourly_capacity(
         charge_rate: float,
@@ -417,6 +483,7 @@ class StorageUnit(EnergyUnit):
         charge_capacity: float,
         roundtrip_efficiency: float,
         net_hourly_capacity: xr.DataArray,
+        initial_soc: float = 1.0,
     ) -> xr.DataArray:
         """Greedy storage dispatch
 
@@ -427,6 +494,7 @@ class StorageUnit(EnergyUnit):
                 energy
             roundtrip_efficiency (float) : Roundtrip efficiency as decimal
                 percent
+            initial_soc (float, optional): Initial state of charge as a fraction between 0.0 and 1.0. Defaults to 1.0.
             net_hourly_capacity (xr.DataArray): Net capacity contained in
                 DataArray with dimension (time) and hourly datetime
                 coordinates
@@ -461,7 +529,7 @@ class StorageUnit(EnergyUnit):
 
         def dispatch_storage(net_hourly_capacity: float):
             # initialize storage unit as full
-            current_charge = float(charge_capacity)
+            current_charge = float(charge_capacity * initial_soc)
 
             for net_capacity in net_hourly_capacity.values:
                 capacity = 0
@@ -525,6 +593,10 @@ class StorageUnit(EnergyUnit):
                     ["energy_unit"],
                     [unit.roundtrip_efficiency for unit in units],
                 ),
+                initial_soc=(
+                    ["energy_unit"],
+                    [unit.initial_soc for unit in units],
+                ),
             ),
             coords=dict(energy_unit=[unit.id for unit in units]),
         )
@@ -547,13 +619,20 @@ class StorageUnit(EnergyUnit):
         # build list
         units = []
 
-        for id, nc, cr, dr, cc, re in zip(
+        #initial_soc may be absent in datasets saved before the field existed
+        if "initial_soc" in unit_dataset:
+            initial_soc = unit_dataset.initial_soc
+        else:
+            initial_soc = xr.ones_like(unit_dataset.nameplate_capacity)         
+
+        for id, nc, cr, dr, cc, re, soc in zip(
             unit_dataset.energy_unit,
             unit_dataset.nameplate_capacity,
             unit_dataset.charge_rate,
             unit_dataset.discharge_rate,
             unit_dataset.charge_capacity,
             unit_dataset.roundtrip_efficiency,
+            initial_soc,
         ):
             units.append(
                 StorageUnit(
@@ -563,6 +642,7 @@ class StorageUnit(EnergyUnit):
                     discharge_rate=float(dr),
                     charge_capacity=float(cc),
                     roundtrip_efficiency=float(re),
+                    initial_soc=float(soc),
                 )
             )
 
@@ -612,6 +692,7 @@ class StorageUnit(EnergyUnit):
                     unit.charge_capacity,
                     unit.roundtrip_efficiency,
                     trial,
+                    unit.initial_soc,
                 )
 
         return net_adj_hourly_capacity_matrix - net_hourly_capacity_matrix
@@ -654,6 +735,21 @@ class HydroUnit(EnergyUnit):
     
     def __init__(self, id, nameplate_capacity, monthly_expected_generation, hourly_forced_outage_rate=None):
         super().__init__(id, nameplate_capacity)
+        # Validate HydroUnit-specific xarray parameters
+        if not isinstance(monthly_expected_generation, xr.DataArray):
+            raise TypeError(
+                f"`monthly_expected_generation` must be an xarray DataArray, "
+                f"got {type(monthly_expected_generation).__name__}"
+            )
+
+        if hourly_forced_outage_rate is not None:
+            if not isinstance(hourly_forced_outage_rate, xr.DataArray):
+                raise TypeError(
+                    f"`hourly_forced_outage_rate` must be an xarray DataArray or None, "
+                    f"got {type(hourly_forced_outage_rate).__name__}"
+                )
+
+        # Assign HydroUnit attributes
         self.monthly_expected_generation = monthly_expected_generation
         self.hourly_forced_outage_rate = hourly_forced_outage_rate
 

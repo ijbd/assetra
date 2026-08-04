@@ -108,7 +108,10 @@ Preparing Input Data
 --------------------
 Energy units accept hourly profiles as `xarray <https://docs.xarray.dev/en/stable/index.html>`_ *DataArray* objects with a single :code:`time` dimension and datetime coordinates. 
 This applies to every profile passed to a unit, including hourly capacity, hourly demand, and hourly forced outage rates. All units in a system must share a common time index, and the
-simulation period requested from a *ProbabilisticSimulation* must fall within it.
+simulation period requested from a *ProbabilisticSimulation* must fall within it. This may require some "data wrangling" in pre-processing as forced outage rates drawn from vulnerbaility curves
+and demand data from utilies are unlikley to have matching time indices. The *assetra.utils* module provides a helper function to construct a time-indexed *DataArray* from a sequence of hourly values, 
+which is useful for preparing input data coming from variety of sources.
+
 Where a dataset already carries its own timestamps, it is usually clearest to construct the *DataArray* directly, so that the coordinates come from the source data rather than being assumed. 
 The :code:`assetra.utils` module provides a shortcut for the other common case, in which the data is a plain sequence of hourly values with no index attached:
 
@@ -161,7 +164,7 @@ Assumptions
  - Storage units are dispatched with a greedy policy to minimize expected unserved energy. When net capacity exceeds demand, storage units charge. When system demand exceeds capacity, storage units discharge. Both charging and discharing are limited by the rated power capacity of the unit.
  - Storage units are dispatched sequentially according to the order in which they are added to the system.
  - Storage unit efficiency deratings are applied in equal part on charge and discharge. 
- - Storage units are initialized with full state of charge.
+ - Storage units are initialized with full state of charge unless initial soc is set lower. 
  - Storage units are well-suited to model battery and pumped hydro storage [3]_.
 
 **ProbabilisticSimulation**
@@ -181,6 +184,6 @@ Notes
 -----
 .. [1] Internally, we **try** to think of *EnergySystem* objects as immutable. There is no method to directly add, remove, or modify *EnergyUnit* objects to/from/in an *EnergySystem*. The reason for this is to make explicitly clear to users that higher level objects do not track the state of lower-level objects. For example, if a user wants to modify a system for which a probabilistic simulation has already been evaluated, it would be tedious to both recognize the system modification from the simulation object and preserve computation from the existing evaluation. Further, we want to make efficient use of data structures for larger simulations. For example, it is both time- and memory- efficient to operate on whole fleets of energy units via matrix operation rather than evaluating each unit individually. This also offers a straightforward path to future parallelization. On the other hand, it is important for users to modify systems, i.e. add or remove units at will, and it is convenient to think of energy units as individual conceptual objects (not as fleets). To summarize, the internal energy system model should be immutable and operate on fleets of energy units, while the external model should be modifiable and treat energy units as individual objects. The *EnergySystemBuilder* acts as a bridge between these two models, by initializing the *EnergySystem* with a list of `xarray <https://docs.xarray.dev/en/stable/index.html>`_ datasets representing immutable fleets.
 .. [2] The dispatch order of unit datasets in probabilistic simulations is defined by two variables in the *assetra.units* module, specifically *RESPONSIVE_UNIT_TYPES* and *NONRESPONSIVE_UNIT_TYPES*. These two variables are lists which both define valid energy unit types and distinguish the order of unit dispatch. The responsive/non-responsive nomenclature refers to whether the hourly capacity of units of a given type depend on system conditions. For example, *StaticUnit* and *StochasticUnit* qualify as non-responsive because their probabilistic hourly capacities do not depend on the net hourly capacity matrix. *StorageUnit* on the other hand qualifies as a responsive type. Dispatch order follows the combined list *(NONRESPONSIVE_UNIT_TYPES + RESPONSIVE_UNIT_TYPES)*.
-.. [3] Conventional hydroelectric units are not well-modeled by the existing `assetra` unit types. Depending on the application, it may be acceptable to treat hydroelectric as either a `StaticUnit` or `StochasticUnit`. The most appropriate model would likely modify the `StorageUnit` implementation to replace charge cycles with hydrological constraints.
+.. [3] Partial outages instead of full outages can be achieved by varying the hourly capacity factor of a generation unt. This funactionality is specifcally useful for wind and solar farms that may operate at only 25-50% capacty druing certain time periods. 
 
 
