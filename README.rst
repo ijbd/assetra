@@ -44,6 +44,7 @@ Platform & Python Version Compatibility
 ---------------------------------------
 Due to required dependencies, `assetra` is currently availible with the following versions of Python on the listed operating systems. As dependencies are updated 
 we will continue to automatically update this matrix. 
+
 +------------------+-----------------+-----------------+-----------------+-----------------+-----------------+
 | Operating System | Python 3.10     | Python 3.11     | Python 3.12     | Python 3.13     | Python 3.14     |
 +==================+=================+=================+=================+=================+=================+
