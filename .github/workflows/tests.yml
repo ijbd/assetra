@@ -14,11 +14,18 @@ jobs:
     name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
 
+    # Experimental versions still run and still report into the README matrix,
+    # but they do not fail the workflow run (and so do not redden the badge).
+    continue-on-error: ${{ matrix.experimental == true }}
+
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
         python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
+        include:
+          - python-version: '3.14'
+            experimental: true
 
     steps:
       - uses: actions/checkout@v4
@@ -83,7 +90,16 @@ jobs:
                 const osMatch = job.name.includes('ubuntu') ? 'ubuntu' : 'windows';
                 const pyMatch = job.name.match(/3\.\d+/)[0];
                 const key = `${osMatch}_${pyMatch.replace('.', '')}`;
-                matrixStatus[key] = job.conclusion === 'success' ? 'passing-brightgreen' : 'failing-red';
+                // Read the test step directly, not job.conclusion: a job marked
+                // continue-on-error reports conclusion 'success' even when it failed,
+                // which would silently turn a broken cell green.
+                const testStep = (job.steps || []).find(
+                  s => s.name === 'Run unittest with coverage'
+                );
+                const passed = testStep
+                  ? testStep.conclusion === 'success'
+                  : job.conclusion === 'success';
+                matrixStatus[key] = passed ? 'passing-brightgreen' : 'failing-red';
               }
             }
             fs.writeFileSync('matrix_status.json', JSON.stringify(matrixStatus));
