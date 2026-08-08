@@ -32,7 +32,7 @@ class ExpectedUnservedEnergy(ResourceAdequacyMetric):
     "[The] total expected amount of unserved energy ... in a given study
     horizon."
 
-    https://gridops.epri.com/Adequacy/metrics#Magnitude_Metrics
+    https://msites.epri.com/resource-adequacy/metrics/metrics-explainers#4257225834-219888353
 
     Args:
         simulation (ProbabilisticSimulation) : Simulation object to
@@ -62,7 +62,7 @@ class LossOfLoadHours(ResourceAdequacyMetric):
 
     "[The] expected count of event-hours per study horizon."
 
-    https://gridops.epri.com/Adequacy/metrics#Loss_of_Load_Hours_.28LOLH.29
+    https://msites.epri.com/resource-adequacy/metrics/metrics-explainers#4257225834-219888353
 
     Args:
         simulation (ProbabilisticSimulation) : Simulation object to
@@ -85,7 +85,7 @@ class LossOfLoadDays(ResourceAdequacyMetric):
 
     "[The] expected count of event-days per study horizon."
 
-    https://gridops.epri.com/Adequacy/metrics#Loss_of_Load_Days_.28LOLD.2C_LOLEd.2Fyr.29
+    https://msites.epri.com/resource-adequacy/metrics/metrics-explainers#4257225834-219888353
 
     Args:
         simulation (ProbabilisticSimulation) : Simulation object to
@@ -110,7 +110,7 @@ class LossOfLoadFrequency(ResourceAdequacyMetric):
     "[The] expected count of adequacy events per study horizon, with an
     adequacy event defined as a contiguous set of hours with a shortfall
 
-    https://gridops.epri.com/Adequacy/metrics#Loss_of_Load_Events_.28LOLEv.2C_LOLF.29
+    https://msites.epri.com/resource-adequacy/metrics/metrics-explainers#4257225834-219888353
 
     Args:
         simulation (ProbabilisticSimulation) : Simulation object to

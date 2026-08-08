@@ -5,8 +5,9 @@
    :hidden:
 
    installation
-   usage
    reference
+   basic_use
+   api
    contributing
 
 Indices

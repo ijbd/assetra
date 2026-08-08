@@ -1,6 +1,7 @@
 from __future__ import annotations
 from logging import getLogger
 from pathlib import Path
+from collections import Counter
 import errno
 import os
 
@@ -37,6 +38,20 @@ class EnergySystem:
                     "Constructing energy system with invalid unit dataset"
                 )
                 raise RuntimeWarning
+    def __repr__(self) -> str:
+        if self.size == 0:
+            return "EnergySystem(empty)"
+
+        breakdown = ", ".join(
+            f"{unit_type.__name__}={dataset.sizes['energy_unit']}"
+            for unit_type, dataset in sorted(
+                self._unit_datasets.items(), key=lambda i: i[0].__name__
+            )
+        )
+        return (
+            f"EnergySystem(size={self.size}, "
+            f"capacity={self.system_capacity:.1f}, {breakdown})"
+        )
 
     @property
     def size(self) -> float:
@@ -128,6 +143,16 @@ class EnergySystemBuilder:
     def __init__(self):
         self._energy_units = []
 
+    def __repr__(self) -> str:
+        if self.size == 0:
+            return "EnergySystemBuilder(empty)"
+
+        counts = Counter(type(unit).__name__ for unit in self._energy_units)
+        breakdown = ", ".join(
+            f"{name}={count}" for name, count in sorted(counts.items())
+        )
+        return f"EnergySystemBuilder(size={self.size}, {breakdown})"
+    
     @property
     def energy_units(self) -> tuple[EnergyUnit]:
         """

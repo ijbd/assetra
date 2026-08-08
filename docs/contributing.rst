@@ -67,12 +67,11 @@ Contributor Workflow
 
 #. Modify files. Follow these guidelines when contributing:
 
-    * For every function added or modified:
+    #. For every function added or modified:
     
         a. Add at least one unit test.
 
     #. For every new EnergyUnit added:
-     :code:`usage.rst`
      
         a. Add an example in the :code:`examples` folder. Include all data needed to run a working example, but be mindful of the file sizes.
         
@@ -124,6 +123,3 @@ Reviewer Workflow
     #. Publish package to pypi (requires pypi token)::
 
         poetry publish --build
-
-
-

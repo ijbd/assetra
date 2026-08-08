@@ -12,6 +12,10 @@ ASSETRA
 .. image:: https://github.com/ijbd/assetra/actions/workflows/tests.yml/badge.svg
     :target: https://github.com/ijbd/assetra/actions/workflows/tests.yml
     :alt: Test status
+    
+.. image:: https://raw.githubusercontent.com/ijbd/assetra/main/.github/coverage.svg
+    :target: https://github.com/ijbd/assetra/actions/workflows/tests.yml
+    :alt: Test coverage
 
 The ASSET Lab Resource adequacy package (assetra) is a light-weight, open-source energy system resource adequacy package maintained by the University of Michigan ASSET Lab.
 
@@ -35,6 +39,31 @@ Features
         * Effective load-carrying capability (ELCC)
 * Object-oriented interface to manage energy units within energy systems
 * Internal computation stored in `xarray <https://docs.xarray.dev/en/stable/index.html>`_ datasets
+
+Platform & Python Version Compatibility
+---------------------------------------
+Due to required dependencies, `assetra` is currently availible with the following versions of Python on the listed operating systems. As dependencies are updated 
+we will continue to automatically update this matrix. 
+
++------------------+-----------------+-----------------+-----------------+-----------------+-----------------+
+| Operating System | Python 3.10     | Python 3.11     | Python 3.12     | Python 3.13     | Python 3.14     |
++==================+=================+=================+=================+=================+=================+
+| **Ubuntu**       | |ubuntu_310|    | |ubuntu_311|    | |ubuntu_312|    | |ubuntu_313|    | |ubuntu_314|    |
++------------------+-----------------+-----------------+-----------------+-----------------+-----------------+
+| **Windows**      | |windows_310|   | |windows_311|   | |windows_312|   | |windows_313|   | |windows_314|   |
++------------------+-----------------+-----------------+-----------------+-----------------+-----------------+
+
+.. |ubuntu_310| image:: https://img.shields.io/badge/Python_3.10-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |ubuntu_311| image:: https://img.shields.io/badge/Python_3.11-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |ubuntu_312| image:: https://img.shields.io/badge/Python_3.12-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |ubuntu_313| image:: https://img.shields.io/badge/Python_3.13-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |ubuntu_314| image:: https://img.shields.io/badge/Python_3.14-failing-red?style=flat-square&logo=python&logoColor=white
+
+.. |windows_310| image:: https://img.shields.io/badge/Python_3.10-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |windows_311| image:: https://img.shields.io/badge/Python_3.11-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |windows_312| image:: https://img.shields.io/badge/Python_3.12-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |windows_313| image:: https://img.shields.io/badge/Python_3.13-passing-brightgreen?style=flat-square&logo=python&logoColor=white
+.. |windows_314| image:: https://img.shields.io/badge/Python_3.14-failing-red?style=flat-square&logo=python&logoColor=white
 
 Credits
 -------
