@@ -46,9 +46,18 @@ jobs:
       - name: Install coverage tools
         run: poetry run python -m pip install coverage coverage-badge
 
+      - name: Probe environment
+        run: |
+          poetry run python -c "import sys; print(sys.version)"
+          poetry run python -c "import netCDF4; print('netCDF4', netCDF4.__version__, '| hdf5', netCDF4.__hdf5libversion__)"
+          poetry run pip list | grep -iE "h5py|h5netcdf|netcdf|hdf|numpy|cftime" || true
+
+      - name: Probe netCDF4 import (faulthandler)
+        run: poetry run python -X faulthandler -c "import netCDF4; print('import OK')"
+
       - name: Run unittest with coverage
         run: |
-          poetry run python -m coverage run --rcfile=.github/.coveragerc -m unittest discover -v -s tests -p "test_assetra.py"
+          poetry run python -X faulthandler -m coverage run --rcfile=.github/.coveragerc -m unittest discover -v -s tests -p "test_assetra.py"
           poetry run python -m coverage report --rcfile=.github/.coveragerc
 
       - name: Generate coverage badge
