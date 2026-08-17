@@ -11,7 +11,7 @@ The ASSET lab resource adequacy package (assetra) seeks to meet this need, with 
 Interface Overview
 ------------------
 The assetra interface is object-oriented and best interpreted as a bottom-up model: individual resources are collected into an energy system, the system is simulated probabilistically, 
-and the simulation is summarized by one or more resource adequacy metrics. Figure 1 shows the full class interface.
+and the simulation is summarized by one or more resource adequacy metrics. Figure 1 shows the simplified class interface.
 
 *EnergyUnits* are the building blocks of an `assetra` model. Each *EnergyUnit* represents a resource with an hourly capacity profile — a demand center, a thermal generator, a wind farm, a battery. 
 Units are added one at a time to an *EnergySystemBuilder*, which is responsible for managing them and assembling them into a system.
@@ -49,7 +49,7 @@ In addition to resource adequacy, the assetra package quantifies resource contri
    :scale: 50 %
    :alt: assetra class interface
 
-   Figure 1: Class interface.
+   Figure 1: Simplified class interface diagram. Relationships shown reflect informal object composition and usage within the package. 
 
 Several core types in assetra are abstract base classes. Abstract interfaces allow for interchangeability and let users extend functionality — creating custom unit types or resource adequacy metrics 
 without modifying the simulation framework. Figure 2 shows the abstract base classes and their derived types.
