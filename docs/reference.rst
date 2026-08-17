@@ -22,8 +22,9 @@ Units are added one at a time to an *EnergySystemBuilder*, which is responsible 
 *EnergySystem*. Calling *run()* dispatches every unit in the system across every trial and populates the net hourly capacity matrix: a two dimensional matrix of net system capacity
 for each Monte Carlo iteration and each hour of the study period.
 
-*ResourceAdequacyMetrics* turn the net capacity matrix produced by the *ProbabilisticSimulation* into report values for your simulation horizon.
-A *ResourceAdequacyMetric* is instantiated with a simulation object and evaluated with *evaluate()*. *ResourceAdequacyMetric* itself is an abstract base class; in practice users work with one of its concrete implementations:
+*ResourceAdequacyMetrics* turn the net capacity matrix produced by the *ProbabilisticSimulation* into report values for your simulation horizon, as exemplified in the metrics_example notebook. 
+A *ResourceAdequacyMetric* is instantiated with a simulation object and evaluated with *evaluate()*. *ResourceAdequacyMetric* itself is an abstract base class; 
+in practice users work with one of its concrete implementations:
 
 .. list-table::
    :header-rows: 1
