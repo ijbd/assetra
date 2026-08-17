@@ -22,7 +22,7 @@ Units are added one at a time to an *EnergySystemBuilder*, which is responsible 
 *EnergySystem*. Calling *run()* dispatches every unit in the system across every trial and populates the net hourly capacity matrix: a two dimensional matrix of net system capacity
 for each Monte Carlo iteration and each hour of the study period.
 
-*ResourceAdequacyMetrics* turn the net capacity matrix produced by the *ProbabilisticSimulation* into reportvale values for your simualtion horizon.
+*ResourceAdequacyMetrics* turn the net capacity matrix produced by the *ProbabilisticSimulation* into report values for your simulation horizon.
 A *ResourceAdequacyMetric* is instantiated with a simulation object and evaluated with *evaluate()*. *ResourceAdequacyMetric* itself is an abstract base class; in practice users work with one of its concrete implementations:
 
 .. list-table::
@@ -108,8 +108,8 @@ Preparing Input Data
 --------------------
 Energy units accept hourly profiles as `xarray <https://docs.xarray.dev/en/stable/index.html>`_ *DataArray* objects with a single :code:`time` dimension and datetime coordinates. 
 This applies to every profile passed to a unit, including hourly capacity, hourly demand, and hourly forced outage rates. All units in a system must share a common time index, and the
-simulation period requested from a *ProbabilisticSimulation* must fall within it. This may require some "data wrangling" in pre-processing as forced outage rates drawn from vulnerbaility curves
-and demand data from utilies are unlikley to have matching time indices. The *assetra.utils* module provides a helper function to construct a time-indexed *DataArray* from a sequence of hourly values, 
+simulation period requested from a *ProbabilisticSimulation* must fall within it. This may require some "data wrangling" in pre-processing as forced outage rates drawn from vulnerability curves
+and demand data from utilities are unlikely to have matching time indices. The *assetra.utils* module provides a helper function to construct a time-indexed *DataArray* from a sequence of hourly values, 
 which is useful for preparing input data coming from variety of sources.
 
 Where a dataset already carries its own timestamps, it is usually clearest to construct the *DataArray* directly, so that the coordinates come from the source data rather than being assumed. 
@@ -141,7 +141,7 @@ The effective order is:
 4. *StochasticUnit* (non-responsive)
 5. *StorageUnit* (responsive)
  
-The two units that are most impacted by dispatch order is the *HydroUnit* and *StorageUnit*. The *StorageUnit* is dispatched last, after every other unit type and both charges and discharges based on the net hourly capacity matrix. 
+The two units that are most impacted by dispatch order are the *HydroUnit* and *StorageUnit*. The *StorageUnit* is dispatched last, after every other unit type and both charges and discharges based on the net hourly capacity matrix. 
 The *HydroUnit* is considered non-responsive, as it does not charge and discharge like the *StorageUnit*. However, hourly dispatch of the *HydroUnit* is dependent on the net demand in the system after the units 
 preceding it in the *NONRESPONSIVE_UNIT_TYPES* list have been dispatched. The monthly generation profile for the *HydroUnit* is converted into an hourly capacity profile by distributing the 
 monthly total across each hour of the month proportional to the net demand remaining after the generation from units listed before the Hydro Unit in NONRESPONSIVE_UNIT_TYPES are considered. 
@@ -161,7 +161,7 @@ Assumptions
  - Stochastic units are well-suited to model thermal, solar, and wind generators.
 
 **Storage Units**
- - Storage units are dispatched with a greedy policy to minimize expected unserved energy. When net capacity exceeds demand, storage units charge. When system demand exceeds capacity, storage units discharge. Both charging and discharing are limited by the rated power capacity of the unit.
+ - Storage units are dispatched with a greedy policy to minimize expected unserved energy. When net capacity exceeds demand, storage units charge. When system demand exceeds capacity, storage units discharge. Both charging and discharging are limited by the rated power capacity of the unit.
  - Storage units are dispatched sequentially according to the order in which they are added to the system.
  - Storage unit efficiency deratings are applied in equal part on charge and discharge. 
  - Storage units are initialized with full state of charge unless initial soc is set lower. 
@@ -178,12 +178,12 @@ Assumptions
  - Hydro units are instantiated with hourly forced outage rates and nameplate capacities, and the net-demand-proportional capacity in each hour is limited by the nameplate capacity of the unit. 
  - Hydro unit outages are sampled independently in each hour.
  - Hydro units contribute zero capacity in hours where unit outages occur, otherwise they contribute their full hourly capacity as calculated from the proportional assignment of the monthly generation across all hours of the month.
- - Hydro units can be used to model individual hydropower plants or regional hydropower. For larger systems, modeling a single regional hydropower unit that accounts for all generation potential in the area will significantly reduce program run time as opposed to modeling every genertaor separately. 
+ - Hydro units can be used to model individual hydropower plants or regional hydropower. For larger systems, modeling a single regional hydropower unit that accounts for all generation potential in the area will significantly reduce program run time as opposed to modeling every generator separately. 
 
 Notes
 -----
 .. [1] Internally, we **try** to think of *EnergySystem* objects as immutable. There is no method to directly add, remove, or modify *EnergyUnit* objects to/from/in an *EnergySystem*. The reason for this is to make explicitly clear to users that higher level objects do not track the state of lower-level objects. For example, if a user wants to modify a system for which a probabilistic simulation has already been evaluated, it would be tedious to both recognize the system modification from the simulation object and preserve computation from the existing evaluation. Further, we want to make efficient use of data structures for larger simulations. For example, it is both time- and memory- efficient to operate on whole fleets of energy units via matrix operation rather than evaluating each unit individually. This also offers a straightforward path to future parallelization. On the other hand, it is important for users to modify systems, i.e. add or remove units at will, and it is convenient to think of energy units as individual conceptual objects (not as fleets). To summarize, the internal energy system model should be immutable and operate on fleets of energy units, while the external model should be modifiable and treat energy units as individual objects. The *EnergySystemBuilder* acts as a bridge between these two models, by initializing the *EnergySystem* with a list of `xarray <https://docs.xarray.dev/en/stable/index.html>`_ datasets representing immutable fleets.
 .. [2] The dispatch order of unit datasets in probabilistic simulations is defined by two variables in the *assetra.units* module, specifically *RESPONSIVE_UNIT_TYPES* and *NONRESPONSIVE_UNIT_TYPES*. These two variables are lists which both define valid energy unit types and distinguish the order of unit dispatch. The responsive/non-responsive nomenclature refers to whether the hourly capacity of units of a given type depend on system conditions. For example, *StaticUnit* and *StochasticUnit* qualify as non-responsive because their probabilistic hourly capacities do not depend on the net hourly capacity matrix. *StorageUnit* on the other hand qualifies as a responsive type. Dispatch order follows the combined list *(NONRESPONSIVE_UNIT_TYPES + RESPONSIVE_UNIT_TYPES)*.
-.. [3] Partial outages instead of full outages can be achieved by varying the hourly capacity factor of a generation unt. This funactionality is specifcally useful for wind and solar farms that may operate at only 25-50% capacty druing certain time periods. 
+.. [3] Partial outages instead of full outages can be achieved by varying the hourly capacity factor of a generation unit. This functionality is specifically useful for wind and solar farms that may operate at only 25-50% capacity during certain time periods. 
 
 
