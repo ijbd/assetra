@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>assetra UML class diagram (editable)</title>
+<style>
+  body { margin:0; padding:24px; background:#ffffff; font-family: sans-serif; }
+  h1 { font-size:18px; font-weight:600; color:#222; margin:0 0 4px 0; }
+  p.note { font-size:13px; color:#666; margin:0 0 20px 0; max-width:900px; line-height:1.5; }
+  #diagram { width:100%; overflow-x:auto; }
+  .legend { margin-top:16px; font-size:12px; color:#555; display:flex; gap:24px; flex-wrap:wrap; }
+  .legend span { display:inline-flex; align-items:center; gap:6px; }
+</style>
+</head>
+<body>
+
+<h1>assetra class diagram</h1>
+<p class="note">
+  To edit: open this file in a text editor, find the backtick-delimited
+  <code>graph</code> variable below (Mermaid classDiagram syntax), edit it,
+  save, and refresh this page in your browser. No internet connection or
+  install required &mdash; the Mermaid + ELK-layout library is bundled
+  directly in mermaid-bundle.js, loaded from a script tag below.
+</p>
+
+<div id="diagram">Rendering&hellip;</div>
+
+<div class="legend">
+  <span>&#9671; Aggregation &mdash; reference to an independently-built object</span>
+  <span>&#9670; Composition &mdash; required constructor argument</span>
+  <span>&#8611; Inheritance</span>
+  <span>&#8674; Dependency / produces</span>
+</div>
+
+<script src="mermaid-bundle.js"></script>
+<script>
+(async () => {
+  const mermaid = window.mermaidInstance;
+
+  // ---- EDIT THE DIAGRAM BELOW ----
+  const graph = `
+classDiagram
+    class EnergyUnit {
+        <<abstract>>
+        +int id
+        +float nameplate_capacity
+        +to_unit_dataset()* Dataset
+        +from_unit_dataset()* list
+        +get_probabilistic_capacity_matrix()*
+    }
+
+    class StaticUnit {
+        +hourly_capacity : DataArray
+    }
+    class StochasticUnit {
+        +hourly_capacity : DataArray
+        +hourly_forced_outage_rate : DataArray
+    }
+    class StorageUnit {
+        +charge_capacity : float
+        +discharge_capacity : float
+        +energy_capacity : float
+        +charge_efficiency : float
+        +discharge_efficiency : float
+    }
+    class HydroUnit {
+        +monthly_expected_generation : DataArray
+        +hourly_forced_outage_rate : DataArray
+    }
+    class DemandUnit {
+        +hourly_demand : DataArray
+    }
+
+    EnergyUnit <|-- StaticUnit
+    EnergyUnit <|-- StochasticUnit
+    EnergyUnit <|-- StorageUnit
+    EnergyUnit <|-- HydroUnit
+    StaticUnit <|-- DemandUnit
+
+    class EnergySystemBuilder {
+        -list~EnergyUnit~ _energy_units
+        +add_unit(EnergyUnit)
+        +remove_unit(EnergyUnit)
+        +build() EnergySystem
+    }
+
+    class EnergySystem {
+        -dict _unit_datasets
+        +size : float
+        +system_capacity : float
+        +get_system_by_type(type) EnergySystem
+        +save(Path)
+        +load(Path)
+    }
+
+    EnergySystemBuilder o-- EnergyUnit : holds
+    EnergySystemBuilder ..> EnergySystem : build() produces
+
+    class ProbabilisticSimulation {
+        -datetime _start_hour
+        -datetime _end_hour
+        -int _trial_size
+        -EnergySystem _energy_system
+        +assign_energy_system(EnergySystem)
+        +run()
+        +copy() ProbabilisticSimulation
+    }
+
+    ProbabilisticSimulation o-- EnergySystem : assigned post-construction
+
+    class ResourceAdequacyMetric {
+        <<abstract>>
+        #ProbabilisticSimulation simulation
+        +evaluate()* float
+    }
+    class ExpectedUnservedEnergy
+    class LossOfLoadHours
+    class LossOfLoadDays
+    class LossOfLoadFrequency
+
+    ResourceAdequacyMetric <|-- ExpectedUnservedEnergy
+    ResourceAdequacyMetric <|-- LossOfLoadHours
+    ResourceAdequacyMetric <|-- LossOfLoadDays
+    ResourceAdequacyMetric <|-- LossOfLoadFrequency
+    ResourceAdequacyMetric *-- ProbabilisticSimulation : required at init
+
+    class ResourceContributionMetric {
+        <<abstract>>
+        #EnergySystem original_energy_system
+        #ProbabilisticSimulation simulation
+        #type~ResourceAdequacyMetric~ resource_adequacy_metric
+        +evaluate(EnergySystem addition)* float
+    }
+    class EffectiveLoadCarryingCapability {
+        +evaluate(EnergySystem addition) float
+    }
+
+    ResourceContributionMetric <|-- EffectiveLoadCarryingCapability
+    ResourceContributionMetric o-- EnergySystem : required at init
+    ResourceContributionMetric o-- ProbabilisticSimulation : required at init
+    ResourceContributionMetric ..> ResourceAdequacyMetric : instantiates metric type
+`;
+  // ---- END EDIT REGION ----
+
+  const { svg } = await mermaid.render('umlSvg', graph);
+  document.getElementById('diagram').innerHTML = svg;
+})();
+</script>
+
+</body>
+</html>
