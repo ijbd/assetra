@@ -133,10 +133,14 @@ jobs:
               f.write(content)
           "
 
-      - name: Commit updated README.rst
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.rst
-          git diff --staged --quiet || git commit -m "Update platform matrix badges in README [skip ci]"
-          git push
+      - name: Open PR for README matrix badge update
+        if: github.ref == 'refs/heads/main'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "Update platform matrix badges in README [skip ci]"
+          title: "Update platform matrix badges in README"
+          body: "Automated update of the Python/OS support matrix badges in `README.rst` based on the latest test results."
+          branch: "auto/readme-matrix-badges"
+          delete-branch: true
+          add-paths: |
+            README.rst
