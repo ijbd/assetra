@@ -49,11 +49,7 @@ In addition to resource adequacy, the assetra package quantifies resource contri
    :scale: 50 %
    :alt: assetra class interface
 
-<<<<<<< HEAD
    Figure 1: Simplified workflow diagram. Relationships shown reflect informal object composition and usage within the package. 
-=======
-   Figure 1: Simplified class interface diagram. Relationships shown reflect informal object composition and usage within the package. 
->>>>>>> origin/main
 
 Several core types in assetra are abstract base classes. Abstract interfaces allow for interchangeability and let users extend functionality — creating custom unit types or resource adequacy metrics 
 without modifying the simulation framework. Figure 2 shows the abstract base classes and their derived types.
