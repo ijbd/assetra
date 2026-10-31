@@ -2142,6 +2142,193 @@ class TestAssetraMarginalContribution(unittest.TestCase):
         np.testing.assert_allclose(net.values, [[-0.5, -1.4, 1.0]], atol=1e-9)
         np.testing.assert_allclose(output.values, [[0.5, 1.4, 0.0]], atol=1e-9)
 
+    def test_scale_storage_dataset(self):
+        from assetra.contribution import _scale_storage_dataset
+        from assetra.units import StorageUnit
+        e1, ps, r = self._f5()
+        ds = e1.unit_datasets[StorageUnit]
+        before = ds.copy(deep=True)
+        scaled = _scale_storage_dataset(ds, [2], 1.1)
+        self.assertTrue(ds.identical(before))
+        for v in ("charge_rate", "discharge_rate", "charge_capacity", "nameplate_capacity"):
+            self.assertAlmostEqual(1.1, float(scaled[v].sel(energy_unit=2)), delta=1e-12, msg=v)
+        self.assertTrue(scaled["initial_soc"].identical(ds["initial_soc"]))
+        self.assertNotIn("initial_soc", _scale_storage_dataset(ds.drop_vars("initial_soc"), [2], 1.1))
+
+    def test_mri_constructor_errors(self):
+        from assetra.metrics import ExpectedUnservedEnergy, LossOfLoadFrequency
+        from assetra.contribution import MarginalReliabilityImpact
+
+        def rc(e1, ps, method, step=None, metric=ExpectedUnservedEnergy):
+            return MarginalReliabilityImpact(e1, ps, metric, perturbation_size=step, method=method)
+
+        e1, ps, r = self._f1()
+        with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(TypeError, "EnergySystem"):
+            rc("x", ps, "forward")
+        with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(TypeError, "ResourceAdequacyMetric"):
+            rc(e1, ps, "forward", metric=ExpectedUnservedEnergy(ps))
+        with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(ValueError, "method"):
+            rc(e1, ps, "newton")
+        for step in (0, -1, float("nan")):
+            with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(ValueError, "perturbation_size", msg=repr(step)):
+                rc(e1, ps, "forward", step)
+        # MRI accepts any metric class
+        self.assertEqual(0, rc(e1, ps, "forward", metric=LossOfLoadFrequency).perturbation_count)
+
+    def test_mri_values(self):
+        import numpy as np
+        from assetra.metrics import ExpectedUnservedEnergy as EUE, LossOfLoadHours as LOLH
+        from assetra.contribution import MarginalReliabilityImpact
+
+        def rc(e1, ps, method, step=None, metric=EUE):
+            return MarginalReliabilityImpact(e1, ps, metric, perturbation_size=step, method=method)
+
+        # (builder, resource key, step, metric, forward, central)
+        cases = [
+            (self._f1, "static2", 1, EUE, 0.75, 0.75), (self._f1, "static2", None, EUE, 0.75, 0.75),
+            (self._f1, "fleet", 1, EUE, 43 / 44, 43 / 44),  # Review Focus 4: the whole static fleet
+            (self._f2, "static2", 1, EUE, 0.5, 1 / 3),
+            (self._f3, "g", 0.5, EUE, 0.5, 0.5), (self._f3, "g", 4, EUE, 0.2, 5 / 13),
+            (self._f3, "h", 1, EUE, 1.0, 1.0), (self._f3, "gh", 0.5, EUE, 2 / 3, 2 / 3),
+            (self._f3, "h", 1, LOLH, 1.0, 1.0),
+            (self._f4, "stoch2", 1, EUE, 0.0, 0.0),
+            (self._f5, "storage2", 0.1, EUE, 0.5, 0.5), (self._f5, "storage2", 1, EUE, 1.0, 2 / 3),
+            (self._f5, "static1", 0.1, EUE, 0.5, 0.5), (self._f5, "hybrid", 0.2, EUE, 0.5, 0.5),
+            (self._f6, "storage2", 0.1, EUE, 2.0, 2.0),
+            (self._f7, "hydro2", 0.3, EUE, 0.5, 0.5), (self._f7_two_hydro, "hydro3", 0.3, EUE, 19 / 60, 19 / 60),
+            (self._f10, "storage2", 0.225, EUE, -0.9, -9 / 64),
+        ]
+        for case in cases:
+            builder, key, step, metric, forward, central = case
+            e1, ps, r = builder()
+            for method, expected, count in (("forward", forward, 1), ("central", central, 2)):
+                mri = rc(e1, ps, method, step, metric)
+                # F4 gives 0 for any draw with an outage; the seed only rules out an outage-free draw
+                np.random.seed(0)
+                observed = mri.evaluate(r[key])
+                self.assertAlmostEqual(expected, observed, delta=0.01, msg=f"{case} {method}")
+                self.assertEqual(count, mri.perturbation_count, msg=f"{case} {method}")
+
+    def test_mri_errors(self):
+        from assetra.units import StaticUnit
+        from assetra.metrics import ExpectedUnservedEnergy, LossOfLoadHours
+        from assetra.contribution import MarginalReliabilityImpact
+
+        def rc(e1, ps, method, step=None, metric=ExpectedUnservedEnergy):
+            return MarginalReliabilityImpact(e1, ps, metric, perturbation_size=step, method=method)
+
+        e1, ps, r = self._f1()
+        for method in ("forward", "central"):
+            with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(RuntimeWarning, "does not respond", msg=method):
+                rc(e1, ps, method, 1, LossOfLoadHours).evaluate(r["static2"])
+        e1, ps, r = self._f1(demand=(50, 50, 50, 50))
+        for method in ("forward", "central"):
+            with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(RuntimeWarning, "no risk", msg=method):
+                rc(e1, ps, method).evaluate(r["static2"])
+        e1, ps, r = self._f3()
+        with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(ValueError, "perturbation_size"):
+            rc(e1, ps, "central", 5).evaluate(r["g"])
+        static3 = StaticUnit(id=3, nameplate_capacity=0, hourly_capacity=get_sample_time_series([0] * 4))
+        e1, ps, r = self._f1(extra_units=(static3,))
+        with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(ValueError, "nameplate"):
+            MarginalReliabilityImpact(e1, ps, ExpectedUnservedEnergy).evaluate(self._system(static3))
+        static3 = StaticUnit(id=3, nameplate_capacity=1, hourly_capacity=get_sample_time_series([1, -1, 0, 0]))
+        e1, ps, r = self._f1(extra_units=(static3,))
+        with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(ValueError, "negative"):
+            MarginalReliabilityImpact(e1, ps, ExpectedUnservedEnergy).evaluate(self._system(static3))
+
+    def test_mri_does_not_mutate_inputs(self):
+        from assetra.metrics import ExpectedUnservedEnergy
+        from assetra.contribution import MarginalReliabilityImpact
+        e1, ps, r = self._f5()
+        resources = r["storage2"]
+        copies = [(system, {t: ds.copy(deep=True) for t, ds in system.unit_datasets.items()}) for system in (e1, resources)]
+        MarginalReliabilityImpact(e1, ps, ExpectedUnservedEnergy, perturbation_size=0.1, method="central").evaluate(resources)
+        for system, datasets in copies:
+            self.assertEqual(list(datasets), list(system.unit_datasets))
+            for unit_type, dataset in datasets.items():
+                self.assertTrue(system.unit_datasets[unit_type].identical(dataset), msg=unit_type.__name__)
+        self.assertIn("no system assigned", repr(ps))
+
+    def test_mri_loaded_and_trimmed_systems(self):  # Review Focus 2 and 3
+        import tempfile
+        import warnings
+        from pathlib import Path
+        from assetra.system import EnergySystem
+        from assetra.units import StorageUnit
+        from assetra.metrics import ExpectedUnservedEnergy
+        from assetra.contribution import MarginalReliabilityImpact
+
+        def rc(e1, ps, method, step=None, metric=ExpectedUnservedEnergy):
+            return MarginalReliabilityImpact(e1, ps, metric, perturbation_size=step, method=method)
+
+        e1, ps, r = self._f1()
+        with tempfile.TemporaryDirectory() as tmp, warnings.catch_warnings():
+            # third-party noise: NumPy >= 2.5 deprecation inside xarray's netCDF4 writer
+            warnings.filterwarnings("ignore", "Setting the shape on a NumPy array", DeprecationWarning)
+            e1.save(Path(tmp, "system"))
+            loaded = EnergySystem()
+            loaded.load(Path(tmp, "system"))
+        self.assertAlmostEqual(0.75, rc(loaded, ps, "forward", 1).evaluate(r["static2"]), delta=0.01)
+        # a storage dataset saved before initial_soc existed
+        e1, ps, r = self._f5()
+        old = EnergySystem({**e1.unit_datasets, StorageUnit: e1.unit_datasets[StorageUnit].drop_vars("initial_soc")})
+        self.assertAlmostEqual(0.5, rc(old, ps, "central", 0.1).evaluate(r["storage2"]), delta=0.01)
+        # a simulation window shorter than the unit profiles
+        e1, ps, r = self._f1(extra_hours=2)
+        self.assertAlmostEqual(0.75, rc(e1, ps, "forward", 1).evaluate(r["static2"]), delta=0.01)
+
+    def test_mri_reuse_after_error(self):  # Review Focus 5
+        from assetra.metrics import ExpectedUnservedEnergy
+        from assetra.contribution import MarginalReliabilityImpact
+        e1, ps, r = self._f3()
+        rc = MarginalReliabilityImpact(e1, ps, ExpectedUnservedEnergy, perturbation_size=5, method="central")
+        with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(ValueError, "perturbation_size"):
+            rc.evaluate(r["g"])
+        self.assertAlmostEqual(7 / 12, rc.evaluate(r["gh"]), delta=0.01)
+        self.assertEqual(2, rc.perturbation_count)
+
+    def test_mri_custom_types_and_seeds(self):
+        import numpy as np
+        from assetra.units import NONRESPONSIVE_UNIT_TYPES, RESPONSIVE_UNIT_TYPES, DemandUnit, StaticUnit, StochasticUnit
+        from assetra.metrics import ExpectedUnservedEnergy
+        from assetra.contribution import MarginalReliabilityImpact
+
+        def rc(e1, ps, method, step=None, metric=ExpectedUnservedEnergy):
+            return MarginalReliabilityImpact(e1, ps, metric, perturbation_size=step, method=method)
+
+        class DummyUnit(StaticUnit):
+            pass
+
+        NONRESPONSIVE_UNIT_TYPES.append(DummyUnit)
+        RESPONSIVE_UNIT_TYPES.append(DummyUnit)
+        try:
+            e1, ps, r = self._f3()
+            self.assertAlmostEqual(0.5, rc(e1, ps, "forward", 0.5).evaluate(r["g"]), delta=0.01)
+            e1, ps, r = self._f5()
+            self.assertAlmostEqual(0.5, rc(e1, ps, "forward", 0.1).evaluate(r["storage2"]), delta=0.01)
+        finally:
+            NONRESPONSIVE_UNIT_TYPES.remove(DummyUnit)
+            RESPONSIVE_UNIT_TYPES.remove(DummyUnit)
+
+        # every call samples afresh, so the same seed gives the same factor
+        stoch2 = StochasticUnit(id=2, nameplate_capacity=1, hourly_capacity=get_sample_time_series([1] * 4),
+                                hourly_forced_outage_rate=get_sample_time_series([0.5] * 4))
+        e1 = self._system(
+            DemandUnit(id=0, hourly_demand=get_sample_time_series([12] * 4)),
+            StaticUnit(id=1, nameplate_capacity=10, hourly_capacity=get_sample_time_series([10] * 4)),
+            stoch2,
+            StochasticUnit(id=3, nameplate_capacity=4, hourly_capacity=get_sample_time_series([4] * 4),
+                           hourly_forced_outage_rate=get_sample_time_series([0.5] * 4)),
+        )
+        mri = rc(e1, self._simulation(4, 20), "forward", 0.5)
+        observed = []
+        for _ in range(2):
+            np.random.seed(1)
+            observed.append(mri.evaluate(self._system(stoch2)))
+        self.assertEqual(observed[0], observed[1])
+        self.assertEqual(1, mri.perturbation_count)  # reset by every call
+
 #new -- hydrounit tests 
 from assetra.units import HydroUnit
 import pandas as pd
