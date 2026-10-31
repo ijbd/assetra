@@ -1,7 +1,14 @@
 from logging import getLogger
 from abc import ABC, abstractmethod
 
-from assetra.units import RESPONSIVE_UNIT_TYPES, NONRESPONSIVE_UNIT_TYPES
+from assetra.units import (
+    RESPONSIVE_UNIT_TYPES,
+    NONRESPONSIVE_UNIT_TYPES,
+    StaticUnit,
+    StochasticUnit,
+    HydroUnit,
+    StorageUnit,
+)
 from assetra.system import EnergySystem
 from assetra.simulation import ProbabilisticSimulation
 from assetra.metrics import ResourceAdequacyMetric
@@ -9,6 +16,10 @@ from assetra.metrics import ResourceAdequacyMetric
 import xarray as xr
 
 LOG = getLogger(__name__)
+
+# unit types that can be accredited as resources of a base system (exact
+# types: subclasses such as DemandUnit are not supported)
+_SUPPORTED_RESOURCE_TYPES = (StaticUnit, StochasticUnit, HydroUnit, StorageUnit)
 
 
 class ResourceContributionMetric(ABC):
@@ -47,6 +58,199 @@ class ResourceContributionMetric(ABC):
             float: Quantified resource contribution of addition to the energy
                 system.
         """
+
+
+def _zero_net_matrix(simulation: ProbabilisticSimulation) -> xr.DataArray:
+    """Return a net hourly capacity matrix of zeros for a simulation.
+
+    A copy of the simulation runs an empty energy system, so the matrix has
+    exactly the trial and time coordinates that the simulation produces.
+
+    Args:
+        simulation (ProbabilisticSimulation): Simulation whose time range and
+            trial size are used. It is not modified.
+
+    Returns:
+        xr.DataArray: Matrix of zeros with dimensions (trial, time).
+    """
+    empty_simulation = simulation.copy()
+    empty_simulation.assign_energy_system(EnergySystem({}))
+    empty_simulation.run()
+    zero_matrix = empty_simulation.net_hourly_capacity_matrix
+
+    # unit outputs are added onto this matrix by position (with .values)
+    assert zero_matrix.dims == ("trial", "time"), (
+        "Unexpected net hourly capacity matrix dimensions: "
+        + str(zero_matrix.dims)
+    )
+    return zero_matrix
+
+
+def _resource_unit_ids(
+    energy_system: EnergySystem, resources: EnergySystem
+) -> dict[type, list[int]]:
+    """Return the ids of the resource units, matched to the base system.
+
+    Unit datasets are matched by their exact unit type (the dict key, with
+    no subclass matching) and units by the ids in their energy_unit
+    coordinate. The resources only identify units: the base system's data
+    is used for everything else.
+
+    Args:
+        energy_system (EnergySystem): Base system containing the resources.
+        resources (EnergySystem): Units of the base system to accredit
+            together as one resource.
+
+    Returns:
+        dict[type, list[int]]: Resource unit ids by unit type, in the order
+            in which the units appear in the base system's unit dataset.
+
+    Raises:
+        TypeError: Resources are not an EnergySystem.
+        ValueError: Resources are empty, hold an unsupported unit type, hold
+            hydro units while a hydro unit dataset has no unit ids, or hold
+            a unit that is not in the base system.
+    """
+    # check for a non-empty energy system
+    if not isinstance(resources, EnergySystem):
+        message = (
+            "Resources must be an EnergySystem, got "
+            + type(resources).__name__
+        )
+        LOG.error(message)
+        raise TypeError(message)
+    if resources.size == 0:
+        message = (
+            "Resources are empty; they must hold units of the base system"
+        )
+        LOG.error(message)
+        raise ValueError(message)
+
+    # check unit types (exact types) before any ids
+    for unit_type in resources.unit_datasets:
+        if unit_type not in _SUPPORTED_RESOURCE_TYPES:
+            message = (
+                f"Resources of type {unit_type.__name__} are not supported; "
+                "supported types are "
+                + ", ".join(t.__name__ for t in _SUPPORTED_RESOURCE_TYPES)
+            )
+            LOG.error(message)
+            raise ValueError(message)
+
+    # check hydro unit ids, without which positions would stand in for ids
+    if HydroUnit in resources.unit_datasets:
+        for name, system in (
+            ("base system", energy_system),
+            ("resources", resources),
+        ):
+            unit_dataset = system.unit_datasets.get(HydroUnit)
+            if unit_dataset is None or "energy_unit" in unit_dataset.coords:
+                continue
+            message = (
+                f"HydroUnit dataset of the {name} has no unit ids (no "
+                "energy_unit coordinate); rebuild the system from its units "
+                "with this version of assetra"
+            )
+            LOG.error(message)
+            raise ValueError(message)
+
+    # check that every resource unit is in the base system under its type
+    resource_ids = dict()
+    for unit_type, unit_dataset in resources.unit_datasets.items():
+        base_dataset = energy_system.unit_datasets.get(unit_type)
+        base_ids = (
+            []
+            if base_dataset is None
+            else [int(i) for i in base_dataset.energy_unit.values]
+        )
+        ids = [int(i) for i in unit_dataset.energy_unit.values]
+        base_id_set = set(base_ids)
+        for unit_id in ids:
+            if unit_id not in base_id_set:
+                message = (
+                    f"{unit_type.__name__} with id {unit_id} is not in the "
+                    "base system"
+                )
+                LOG.error(message)
+                raise ValueError(message)
+
+        # follow the base system's order, whatever the order of resources
+        selected_ids = set(ids)
+        resource_ids[unit_type] = [i for i in base_ids if i in selected_ids]
+
+    return resource_ids
+
+
+def _replay_non_responsive(
+    energy_system: EnergySystem,
+    resource_ids: dict[type, list[int]],
+    simulation: ProbabilisticSimulation,
+) -> tuple[xr.DataArray, xr.DataArray]:
+    """Replay the non-responsive dispatch of a simulation run, splitting out
+    the resource's own output.
+
+    Unit datasets are dispatched onto a running net in the order of
+    NONRESPONSIVE_UNIT_TYPES, read at call time, as
+    ProbabilisticSimulation.run does. A unit dataset without resource units
+    is dispatched whole. A static or stochastic unit dataset with resource
+    units is sampled in two calls, the rest of the fleet first (if any) and
+    then the resource units, so the resource's output comes from the same
+    draws as the net (common random numbers). Hydro units are dispatched one
+    at a time in dataset order, each against the running net, which is the
+    sequential algorithm HydroUnit uses for a whole dataset.
+
+    Args:
+        energy_system (EnergySystem): Base system. It is not modified.
+        resource_ids (dict[type, list[int]]): Resource unit ids by unit
+            type, as returned by _resource_unit_ids.
+        simulation (ProbabilisticSimulation): Simulation whose time range and
+            trial size are used. It is not modified.
+
+    Returns:
+        tuple[xr.DataArray, xr.DataArray]: Net hourly capacity matrix after
+            all non-responsive units (N_nr) and the resource's own output
+            (X_T), both with dimensions (trial, time).
+    """
+    non_responsive_net = _zero_net_matrix(simulation)
+    resource_output = xr.zeros_like(non_responsive_net)
+
+    for unit_type in NONRESPONSIVE_UNIT_TYPES:
+        if unit_type not in energy_system.unit_datasets:
+            continue
+        unit_dataset = energy_system.unit_datasets[unit_type]
+        ids = resource_ids.get(unit_type)
+
+        if not ids:
+            # no resource units: dispatch the whole dataset
+            non_responsive_net += unit_type.get_probabilistic_capacity_matrix(
+                unit_dataset, non_responsive_net
+            ).values
+        elif unit_type is HydroUnit:
+            # one unit at a time, capturing the resource units' dispatch
+            for i, unit_id in enumerate(unit_dataset.energy_unit.values):
+                unit_output = unit_type.get_probabilistic_capacity_matrix(
+                    unit_dataset.isel(energy_unit=slice(i, i + 1)),
+                    non_responsive_net,
+                ).values
+                non_responsive_net += unit_output
+                if int(unit_id) in ids:
+                    resource_output += unit_output
+        else:
+            # static or stochastic: the rest of the fleet, then the resource
+            rest_dataset = unit_dataset.drop_sel(energy_unit=ids)
+            if rest_dataset.sizes["energy_unit"] > 0:
+                non_responsive_net += (
+                    unit_type.get_probabilistic_capacity_matrix(
+                        rest_dataset, non_responsive_net
+                    ).values
+                )
+            unit_output = unit_type.get_probabilistic_capacity_matrix(
+                unit_dataset.sel(energy_unit=ids), non_responsive_net
+            ).values
+            non_responsive_net += unit_output
+            resource_output += unit_output
+
+    return non_responsive_net, resource_output
 
 
 class EffectiveLoadCarryingCapability(ResourceContributionMetric):

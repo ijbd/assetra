@@ -1932,6 +1932,216 @@ class TestAssetraContribution(unittest.TestCase):
         observed = rc.evaluate(e2)
         self.assertAlmostEqual(expected, observed, delta=0.01)
 
+
+class TestAssetraMarginalContribution(unittest.TestCase):
+    def _system(self, *units):
+        """Return an energy system built from the given units."""
+        from assetra.system import EnergySystemBuilder
+
+        builder = EnergySystemBuilder()
+        for unit in units:
+            builder.add_unit(unit)
+        return builder.build()
+
+    def _simulation(self, hours: int, trials: int):
+        """Return a simulation of the first hours of 2016-01-01."""
+        from assetra.simulation import ProbabilisticSimulation
+
+        return ProbabilisticSimulation(
+            start_hour="2016-01-01 00:00:00",
+            end_hour=f"2016-01-01 {hours - 1:02d}:00:00",
+            trial_size=trials,
+        )
+
+    def _f1(self, extra_hours=0, extra_units=(), demand=(110, 120, 80, 70)):
+        """Linear regime: 4 hours, 2 trials; the resources are Static 2 and the
+        whole static fleet.
+
+        extra_hours appends that many trailing hours of 0 to every profile,
+        while the simulation stays at 4 hours. extra_units are added to the
+        base after Static 2.
+        """
+        from assetra.units import DemandUnit, StaticUnit
+
+        tail = [0] * extra_hours
+        static2 = StaticUnit(id=2, nameplate_capacity=10, hourly_capacity=get_sample_time_series([5, 10, 0, 10] + tail))
+        e1 = self._system(
+            DemandUnit(id=0, hourly_demand=get_sample_time_series(list(demand) + tail)),
+            StaticUnit(id=1, nameplate_capacity=100, hourly_capacity=get_sample_time_series([100] * 4 + tail)),
+            static2,
+            *extra_units,
+        )
+        resources = {"static2": self._system(static2), "fleet": e1.get_system_by_type(StaticUnit)}
+        return e1, self._simulation(4, 2), resources
+
+    def _f2(self):
+        """Kink at net = 0: 3 hours, 1 trial, Static 2 is the resource."""
+        from assetra.units import DemandUnit, StaticUnit
+
+        static2 = StaticUnit(id=2, nameplate_capacity=2, hourly_capacity=get_sample_time_series([1, 0, 2]))
+        e1 = self._system(
+            DemandUnit(id=0, hourly_demand=get_sample_time_series([15, 10, 6])),
+            StaticUnit(id=1, nameplate_capacity=10, hourly_capacity=get_sample_time_series([10] * 3)),
+            static2,
+        )
+        return e1, self._simulation(3, 1), {"static2": self._system(static2)}
+
+    def _f3(self):
+        """Stochastic units with FOR 0 or 1: 4 hours, 3 trials; the resources are g (id 2), h (id 3) and both."""
+        from assetra.units import DemandUnit, StaticUnit, StochasticUnit
+
+        g = StochasticUnit(id=2, nameplate_capacity=4, hourly_capacity=get_sample_time_series([4] * 4),
+                           hourly_forced_outage_rate=get_sample_time_series([0, 1, 1, 1]))
+        h = StochasticUnit(id=3, nameplate_capacity=2, hourly_capacity=get_sample_time_series([2] * 4),
+                           hourly_forced_outage_rate=get_sample_time_series([0, 0, 1, 1]))
+        e1 = self._system(
+            DemandUnit(id=0, hourly_demand=get_sample_time_series([57, 62, 30, 10])),
+            StaticUnit(id=1, nameplate_capacity=50, hourly_capacity=get_sample_time_series([50] * 4)),
+            g,
+            h,
+        )
+        resources = {"g": self._system(g), "h": self._system(h), "gh": e1.get_system_by_type(StochasticUnit)}
+        return e1, self._simulation(4, 3), resources
+
+    def _f4(self):
+        """The resource's own random outages: 4 hours, 10 trials, Stochastic 2 is the resource."""
+        from assetra.units import DemandUnit, StaticUnit, StochasticUnit
+
+        stoch2 = StochasticUnit(id=2, nameplate_capacity=4, hourly_capacity=get_sample_time_series([4] * 4),
+                                hourly_forced_outage_rate=get_sample_time_series([0.5] * 4))
+        e1 = self._system(
+            DemandUnit(id=0, hourly_demand=get_sample_time_series([12] * 4)),
+            StaticUnit(id=1, nameplate_capacity=10, hourly_capacity=get_sample_time_series([10] * 4)),
+            stoch2,
+        )
+        return e1, self._simulation(4, 10), {"stoch2": self._system(stoch2)}
+
+    def _f5(self):
+        """Storage: 2 hours, 1 trial; the resources are Storage 2, Static 1 and both together."""
+        from assetra.units import DemandUnit, StaticUnit, StorageUnit
+
+        static1 = StaticUnit(id=1, nameplate_capacity=1, hourly_capacity=get_sample_time_series([1, 0]))
+        storage2 = StorageUnit(id=2, nameplate_capacity=1, charge_rate=1, discharge_rate=1, charge_capacity=1,
+                               roundtrip_efficiency=1.0, initial_soc=1)
+        e1 = self._system(DemandUnit(id=0, hourly_demand=get_sample_time_series([2, 1])), static1, storage2)
+        resources = {"storage2": self._system(storage2), "static1": self._system(static1),
+                     "hybrid": self._system(static1, storage2)}
+        return e1, self._simulation(2, 1), resources
+
+    def _f6(self):
+        """Storage factor above 1: 2 hours, 1 trial, Storage 2 is the resource."""
+        from assetra.units import DemandUnit, StaticUnit, StorageUnit
+
+        storage2 = StorageUnit(id=2, nameplate_capacity=1, charge_rate=2, discharge_rate=2, charge_capacity=6,
+                               roundtrip_efficiency=1.0, initial_soc=1)
+        e1 = self._system(
+            DemandUnit(id=0, hourly_demand=get_sample_time_series([4, 4])),
+            StaticUnit(id=1, nameplate_capacity=1, hourly_capacity=get_sample_time_series([1, 1])),
+            storage2,
+        )
+        return e1, self._simulation(2, 1), {"storage2": self._system(storage2)}
+
+    def _f7(self):
+        """Hydro: 3 hours in January, 1 trial, Hydro 2 is the resource."""
+        from assetra.units import DemandUnit, StaticUnit, HydroUnit
+
+        hydro2 = HydroUnit(id=2, nameplate_capacity=3,
+                           monthly_expected_generation=xr.DataArray([3.0] * 12, coords=dict(month=list(range(1, 13)))))
+        e1 = self._system(
+            DemandUnit(id=0, hourly_demand=get_sample_time_series([12, 14, 9])),
+            StaticUnit(id=1, nameplate_capacity=10, hourly_capacity=get_sample_time_series([10] * 3)),
+            hydro2,
+        )
+        return e1, self._simulation(3, 1), {"hydro2": self._system(hydro2)}
+
+    def _f7_two_hydro(self):
+        """Hydro, two units: Hydro 2 dispatches before Hydro 3, which is the resource."""
+        from assetra.units import DemandUnit, StaticUnit, HydroUnit
+
+        hydro3 = HydroUnit(id=3, nameplate_capacity=3,
+                           monthly_expected_generation=xr.DataArray([1.9] * 12, coords=dict(month=list(range(1, 13)))))
+        e1 = self._system(
+            DemandUnit(id=0, hourly_demand=get_sample_time_series([12, 14, 9])),
+            StaticUnit(id=1, nameplate_capacity=10, hourly_capacity=get_sample_time_series([10] * 3)),
+            HydroUnit(id=2, nameplate_capacity=1.2,
+                      monthly_expected_generation=xr.DataArray([3.0] * 12, coords=dict(month=list(range(1, 13))))),
+            hydro3,
+        )
+        return e1, self._simulation(3, 1), {"hydro3": self._system(hydro3)}
+
+    def _f10(self):
+        """Negative accreditation of storage: 7 hours, 1 trial, Storage 2 (the resource) dispatches before Storage 3."""
+        from assetra.units import DemandUnit, StaticUnit, StorageUnit
+
+        storage2 = StorageUnit(id=2, nameplate_capacity=2.25, charge_rate=2.25, discharge_rate=2.25,
+                               charge_capacity=4.5, roundtrip_efficiency=1.0, initial_soc=0)
+        e1 = self._system(
+            DemandUnit(id=0, hourly_demand=get_sample_time_series([3] * 7)),
+            StaticUnit(id=1, nameplate_capacity=6,
+                       hourly_capacity=get_sample_time_series([4.75, 4.25, 3.75, 0.25, 2.5, 1.25, 5.75])),
+            storage2,
+            StorageUnit(id=3, nameplate_capacity=0.5, charge_rate=0.5, discharge_rate=0.5, charge_capacity=2,
+                        roundtrip_efficiency=1.0, initial_soc=1),
+        )
+        return e1, self._simulation(7, 1), {"storage2": self._system(storage2)}
+
+    def test_resource_unit_ids(self):
+        from assetra.contribution import _resource_unit_ids
+        from assetra.units import StochasticUnit
+        e1, ps, r = self._f3()
+        self.assertEqual({StochasticUnit: [2]}, _resource_unit_ids(e1, r["g"]))
+        self.assertEqual({StochasticUnit: [2, 3]}, _resource_unit_ids(e1, r["gh"]))
+
+    def test_resource_unit_ids_errors(self):
+        from assetra.contribution import _resource_unit_ids
+        from assetra.system import EnergySystem
+        from assetra.units import DemandUnit, StaticUnit, StochasticUnit, HydroUnit
+        e1, ps, r = self._f1()
+        with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(TypeError, "EnergySystem"):
+            _resource_unit_ids(e1, "static2")
+        with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(ValueError, "empty"):
+            _resource_unit_ids(e1, EnergySystem({}))
+        with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(ValueError, "not supported"):
+            _resource_unit_ids(e1, self._system(DemandUnit(id=0, hourly_demand=get_sample_time_series([110, 120, 80, 70]))))
+        with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(ValueError, "not in the base system"):
+            _resource_unit_ids(e1, self._system(StaticUnit(id=9, nameplate_capacity=1, hourly_capacity=get_sample_time_series([1] * 4))))
+        # Review Focus 1: a distinct but equal object matches; the same id under another type does not
+        equal = self._system(StaticUnit(id=2, nameplate_capacity=10, hourly_capacity=get_sample_time_series([5, 10, 0, 10])))
+        self.assertEqual({StaticUnit: [2]}, _resource_unit_ids(e1, equal))
+        with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(ValueError, "not in the base system"):
+            _resource_unit_ids(e1, self._system(StochasticUnit(id=2, nameplate_capacity=10,
+                hourly_capacity=get_sample_time_series([10] * 4), hourly_forced_outage_rate=get_sample_time_series([0] * 4))))
+        e7, ps7, r7 = self._f7()
+        no_ids = EnergySystem({**e7.unit_datasets, HydroUnit: e7.unit_datasets[HydroUnit].drop_vars("energy_unit")})
+        with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(ValueError, "unit ids"):
+            _resource_unit_ids(no_ids, r7["hydro2"])
+
+    def test_replay_static(self):
+        import numpy as np
+        from assetra.contribution import _replay_non_responsive, _resource_unit_ids
+        e1, ps, r = self._f1()
+        net, output = _replay_non_responsive(e1, _resource_unit_ids(e1, r["static2"]), ps)
+        self.assertEqual(("trial", "time"), net.dims)
+        np.testing.assert_allclose(net.values, [[-5, -10, 20, 40]] * 2)
+        np.testing.assert_allclose(output.values, [[5, 10, 0, 10]] * 2)
+        self.assertIn("no system assigned", repr(ps))  # the user's simulation is untouched
+
+    def test_replay_stochastic_own_draws(self):
+        import numpy as np
+        from assetra.contribution import _replay_non_responsive, _resource_unit_ids
+        e1, ps, r = self._f3()
+        net, output = _replay_non_responsive(e1, _resource_unit_ids(e1, r["g"]), ps)
+        np.testing.assert_allclose(net.values, [[-1, -10, 20, 40]] * 3)
+        np.testing.assert_allclose(output.values, [[4, 0, 0, 0]] * 3)
+
+    def test_replay_hydro_sequential(self):
+        import numpy as np
+        from assetra.contribution import _replay_non_responsive, _resource_unit_ids
+        e1, ps, r = self._f7_two_hydro()
+        net, output = _replay_non_responsive(e1, _resource_unit_ids(e1, r["hydro3"]), ps)
+        np.testing.assert_allclose(net.values, [[-0.5, -1.4, 1.0]], atol=1e-9)
+        np.testing.assert_allclose(output.values, [[0.5, 1.4, 0.0]], atol=1e-9)
+
 #new -- hydrounit tests 
 from assetra.units import HydroUnit
 import pandas as pd
