@@ -134,8 +134,18 @@ classDiagram
     class EffectiveLoadCarryingCapability {
         +evaluate(EnergySystem addition) float
     }
+    class MarginalEffectiveLoadCarryingCapability {
+        +evaluate(EnergySystem resources) float
+        +perturbation_count int
+    }
+    class MarginalReliabilityImpact {
+        +evaluate(EnergySystem resources) float
+        +perturbation_count int
+    }
 
     ResourceContributionMetric <|-- EffectiveLoadCarryingCapability
+    ResourceContributionMetric <|-- MarginalEffectiveLoadCarryingCapability
+    ResourceContributionMetric <|-- MarginalReliabilityImpact
     ResourceContributionMetric o-- EnergySystem : required at init
     ResourceContributionMetric o-- ProbabilisticSimulation : required at init
     ResourceContributionMetric ..> ResourceAdequacyMetric : instantiates metric type

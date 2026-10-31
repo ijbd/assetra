@@ -37,6 +37,7 @@ Features
         * Loss of load frequency (LOLF)
 * Resource contribution calculation:
         * Effective load-carrying capability (ELCC)
+        * Marginal ELCC and marginal reliability impact (MRI) accreditation of existing resources
 * Object-oriented interface to manage energy units within energy systems
 * Internal computation stored in `xarray <https://docs.xarray.dev/en/stable/index.html>`_ datasets
 

@@ -45,15 +45,18 @@ _ELCC_METRICS = (ExpectedUnservedEnergy, LossOfLoadHours, LossOfLoadDays)
 
 class ResourceContributionMetric(ABC):
     """Class responsible for quantifying resource contributions
-    to an energy system
+    to an energy system, either of an addition to the system
+    (EffectiveLoadCarryingCapability) or of resources that are already in it
+    (MarginalEffectiveLoadCarryingCapability, MarginalReliabilityImpact)
 
     Args:
-        energy_system (EnergySystem): Base system to which resources are added
+        energy_system (EnergySystem): Base system to which resources are
+            added, or that already contains the resources to accredit
         simulation (ProbabilisticSimulation): Instantiated simulation object
             whose parameters (i.e. time range and trial size are used
-            throughout the ELCC calculation)
+            throughout the calculation)
         resource_adequacy_metric: Class derived
-            from ResourceAdequacyMetric to use throughout the ELCC simulation
+            from ResourceAdequacyMetric to use throughout the simulation
             (e.g. ExpectedUnservedEnergy, LossOfLoadHours)
     """
 
@@ -69,15 +72,21 @@ class ResourceContributionMetric(ABC):
 
     @abstractmethod
     def evaluate(self, addition: EnergySystem) -> float:
-        """Return resource contribution of addition to the energy system
+        """Return resource contribution to the energy system of an addition,
+        or of resources that are already in it
 
         Args:
-            addition (EnergySystem): Energy system to add (possibly a single
-            unit)
+            addition (EnergySystem): Energy system to quantify the
+                contribution of: an addition (EffectiveLoadCarryingCapability)
+                or resources already in the base system (marginal
+                accreditation metrics), possibly a single unit. The marginal
+                accreditation metrics name this argument resources.
 
         Returns:
-            float: Quantified resource contribution of addition to the energy
-                system.
+            float: Quantified resource contribution to the energy system: in
+                units of power for EffectiveLoadCarryingCapability, a
+                dimensionless accreditation factor for the marginal
+                accreditation metrics.
         """
 
 
