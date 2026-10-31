@@ -15,7 +15,12 @@ from assetra.units import (
 )
 from assetra.system import EnergySystem
 from assetra.simulation import ProbabilisticSimulation
-from assetra.metrics import ResourceAdequacyMetric
+from assetra.metrics import (
+    ResourceAdequacyMetric,
+    ExpectedUnservedEnergy,
+    LossOfLoadHours,
+    LossOfLoadDays,
+)
 
 import xarray as xr
 
@@ -32,6 +37,10 @@ _DEFAULT_STEP_FRACTION = 0.01
 # secant iterations
 _MAX_DOUBLINGS = 10
 _MAX_ITERATIONS = 100
+
+# metrics accepted by the marginal ELCC, whose risk never decreases as load
+# is added (exact types: a subclass may not stay monotone)
+_ELCC_METRICS = (ExpectedUnservedEnergy, LossOfLoadHours, LossOfLoadDays)
 
 
 class ResourceContributionMetric(ABC):
@@ -1004,6 +1013,247 @@ class MarginalReliabilityImpact(_MarginalContributionMetric):
 
         factor = (upper - lower) / denominator
         LOG.info("Marginal reliability impact: " + str(factor))
+        return factor
+
+
+class MarginalEffectiveLoadCarryingCapability(_MarginalContributionMetric):
+    """Class responsible for accrediting resources that are already in an
+    energy system with their marginal effective load-carrying capability
+    (ELCC): the constant load that the system can add while keeping its
+    baseline resource adequacy when the resources are enlarged by a small
+    step, relative to that step.
+
+    Q. Zhang, F. Zhao, G. Stephen, C. Singh, L. Xie, "A Gradient-Based
+    Capacity Accreditation Framework in Resource Adequacy: Formulation,
+    Computation, and Practical Implications," arXiv:2601.22087, 2026.
+
+    The resources keep their own sampled outages: every perturbed
+    simulation of an evaluate() call reuses that call's samples (common
+    random numbers). Enlarging the resources by a step scales their
+    non-responsive output, and the charge rate, discharge rate, charge
+    capacity and nameplate capacity of their storage units, by
+    1 + step / nameplate capacity. As in EffectiveLoadCarryingCapability,
+    the constant load is added after the non-responsive units, and the
+    responsive units are re-dispatched in every simulation. Non-responsive
+    units are not: units outside the resources keep their sampled output,
+    and hydro units in the resources are not re-dispatched against each
+    other's scaled output.
+
+    With M(c) the resource adequacy when the resources are enlarged by the
+    step and a constant load c is added, and M0 the baseline, the factor is
+    the largest load c at which M(c) is no worse than M0 (the paper's
+    Definition 1), divided by the step. The method keyword selects the
+    search for that load, where the resolution is
+    additional_demand_resolution_pct times the step and N_p is the number
+    of simulations with the resources perturbed:
+
+    - "bisection" (default): halves the search bracket until it is no
+      wider than the resolution, and returns its midpoint. N_p = 7 at the
+      default resolution when the bracket [0, step] is known to hold the
+      load without evaluating its ends: with ExpectedUnservedEnergy, when
+      the resources hold no storage and their output stays between 0 and
+      their nameplate capacity, and when the only responsive units in the
+      system are StorageUnit units. Otherwise both ends are evaluated
+      first, and N_p is 2, plus the number of bracket expansions, plus
+      ceil(log2(bracket width / resolution)).
+    - "secant": the secant method of the paper (eq. 17), safeguarded as in
+      Dekker's method by a bisection step whenever the secant step is
+      undefined or would leave the bracket, or the previous step did not
+      halve it. It evaluates both ends first. N_p depends on the data: it
+      is often lower than with bisection (3 when the risk is linear in the
+      load) and at most about twice the bisection's N_p plus 2.
+
+    The search needs a metric whose risk never decreases as load is added,
+    so resource_adequacy_metric must be exactly ExpectedUnservedEnergy,
+    LossOfLoadHours or LossOfLoadDays. Other metrics, such as
+    LossOfLoadFrequency, and subclasses of these three are refused;
+    MarginalReliabilityImpact accepts any metric. LossOfLoadHours and
+    LossOfLoadDays change in steps, so the risk can stay at its baseline
+    level over a range of loads: if it is at that level at the upper end
+    of the search bracket, that end is returned. The search does not cross
+    the plateau, whose far end can lie well beyond the step.
+
+    Unlike EffectiveLoadCarryingCapability, which returns power, evaluate()
+    returns a dimensionless accreditation factor. The accredited capacity
+    is the factor times the resources' nameplate capacity
+    (resources.system_capacity). The factor is returned as computed, so it
+    can be negative or above 1 for storage, for which the search bracket
+    expands below 0 or above the step as needed. Also unlike
+    EffectiveLoadCarryingCapability, additional_demand_resolution_pct is a
+    fraction of the step, not of the nameplate capacity: at the default
+    0.01, the factor is accurate to about 0.005.
+
+    Each evaluate() call samples the system afresh (seed numpy's random
+    number generator for reproducible results), and nothing is cached
+    between calls: every call runs N_p perturbed simulations of the
+    responsive units, plus 1 for the baseline M0.
+
+    The default step is 1% of the resources' nameplate capacity. For large
+    fleets, an absolute step such as the paper's 10 MW
+    (perturbation_size=10) can be used instead. Counting metrics such as
+    LossOfLoadHours and LossOfLoadDays often do not respond to a 1% step;
+    use a larger step or ExpectedUnservedEnergy.
+
+    Args:
+        energy_system (EnergySystem): Base system containing the resources
+            to accredit.
+        simulation (ProbabilisticSimulation): Instantiated simulation object
+            whose parameters (i.e. time range and trial size) are used
+            throughout the calculation. It is not modified.
+        resource_adequacy_metric (type[ResourceAdequacyMetric]): Metric
+            class to use throughout the calculation: ExpectedUnservedEnergy,
+            LossOfLoadHours or LossOfLoadDays.
+        perturbation_size (float | None, optional): Step in units of power.
+            Defaults to None, for 1% of the nameplate capacity of the
+            resources passed to evaluate().
+        method (str, optional): "bisection" or "secant". Defaults to
+            "bisection".
+
+    Attributes:
+        perturbation_count (int): Number of simulations with the resources
+            perturbed (N_p) in the latest evaluate() call, also when it
+            raised, or 0 before the first call. The baseline simulation is
+            not counted: in total, a call evaluates resource adequacy
+            N_p + 1 times.
+
+    Raises:
+        TypeError: energy_system is not an EnergySystem, or
+            resource_adequacy_metric is not a ResourceAdequacyMetric class.
+        ValueError: method is neither "bisection" nor "secant",
+            perturbation_size is neither None nor a finite number greater
+            than 0, or resource_adequacy_metric is not exactly
+            ExpectedUnservedEnergy, LossOfLoadHours or LossOfLoadDays.
+    """
+
+    _methods = ("bisection", "secant")
+
+    def __init__(
+        self,
+        energy_system: EnergySystem,
+        simulation: ProbabilisticSimulation,
+        resource_adequacy_metric: type[ResourceAdequacyMetric],
+        perturbation_size: float | None = None,
+        method: str = "bisection",
+    ):
+        _MarginalContributionMetric.__init__(
+            self,
+            energy_system,
+            simulation,
+            resource_adequacy_metric,
+            perturbation_size,
+            method,
+        )
+        # exact types, so that subclasses are refused
+        if resource_adequacy_metric not in _ELCC_METRICS:
+            message = (
+                "resource_adequacy_metric must be exactly one of "
+                + ", ".join(m.__name__ for m in _ELCC_METRICS)
+                + f", got {resource_adequacy_metric.__name__}: the root "
+                "search needs a metric whose risk is monotone, never "
+                "decreasing as load is added (MarginalReliabilityImpact "
+                "accepts any metric)"
+            )
+            LOG.error(message)
+            raise ValueError(message)
+
+    def evaluate(
+        self,
+        resources: EnergySystem,
+        additional_demand_resolution_pct: float = 0.01,
+    ) -> float:
+        """Return the marginal effective load-carrying capability of
+        resources that are already in the energy system.
+
+        Args:
+            resources (EnergySystem): Units of the base system to accredit
+                together as one resource, e.g. a system built from some of
+                its units, or energy_system.get_system_by_type(StorageUnit).
+                Units are matched by exact unit type and id, and the base
+                system's data is used.
+            additional_demand_resolution_pct (float, optional): Resolution of
+                the added load to find, as a fraction of the step (not of
+                the nameplate capacity, unlike
+                EffectiveLoadCarryingCapability), greater than 0 and less
+                than 1. Defaults to 0.01 (1%), for a factor accurate to
+                about 0.005. Resolutions far below 1e-12 gain nothing: the
+                search stops at floating-point resolution, and below about
+                1e-16 the secant can reach its iteration cap.
+
+        Returns:
+            float: Dimensionless accreditation factor. Multiplied by the
+                resources' nameplate capacity, it gives their accredited
+                capacity in units of power.
+
+        Raises:
+            TypeError: Resources are not an EnergySystem.
+            ValueError: Resources are empty, hold a unit type other than
+                StaticUnit, StochasticUnit, HydroUnit and StorageUnit, hold
+                hydro units without unit ids, or hold a unit that is not in
+                the base system; their total nameplate capacity is not
+                greater than 0; additional_demand_resolution_pct is not
+                greater than 0 and less than 1; or their output is negative
+                in some trial and hour.
+            RuntimeWarning: The base system has no risk; the metric does not
+                respond to the step (the risk stays at its baseline level
+                with no load and with a load of the step's size added); the
+                search bracket does not hold the load after 10 doublings in
+                one direction; or the secant has not converged after 100
+                iterations.
+        """
+        self._perturbation_count = 0
+        resource_ids, nameplate, step = self._resolve(resources)
+        if not (
+            isinstance(additional_demand_resolution_pct, numbers.Real)
+            and 0 < additional_demand_resolution_pct < 1
+        ):
+            message = (
+                "additional_demand_resolution_pct must be greater than 0 and "
+                "less than 1 (a fraction of the perturbation step), got "
+                f"{additional_demand_resolution_pct!r}"
+            )
+            LOG.error(message)
+            raise ValueError(message)
+        baseline = self._baseline(resource_ids, nameplate, step)
+        eue = self._resource_adequacy_metric is ExpectedUnservedEnergy
+
+        def g(load: float) -> float:
+            # M(+step, load) - M0, counted as N_p also when the search raises
+            self._perturbation_count += 1
+            return self._risk(baseline, step, load) - baseline.risk
+
+        # for EUE, g(0) <= 0 <= g(step) holds without evaluating either end
+        # when the resources hold no storage (whose enlargement can raise
+        # risk), their availability stays within [0, 1], and storage units,
+        # whose dispatch is monotone, are the only responsive units
+        output = baseline.resource_output.values
+        guaranteed = (
+            eue
+            and not baseline.storage_ids
+            and bool(((output >= 0) & (output <= nameplate)).all())
+            and all(
+                unit_type is StorageUnit
+                for unit_type in self._original_energy_system.unit_datasets
+                if unit_type in RESPONSIVE_UNIT_TYPES
+            )
+        )
+        root, _ = _find_largest_root(
+            g,
+            upper=step,
+            tolerance=additional_demand_resolution_pct * step,
+            method=self._method,
+            guaranteed=guaranteed,
+            # counting metrics change in multiples of 1 / trials, so only
+            # EUE needs a tolerance for ties
+            zero_tolerance=1e-9 * baseline.risk if eue else 0.0,
+            # EUE increases strictly with the load while it is above 0, so
+            # a tie is the root itself rather than a point of a plateau
+            exact_root=eue,
+        )
+
+        factor = root / step
+        LOG.info(
+            "Marginal effective load-carrying capability: " + str(factor)
+        )
         return factor
 
 

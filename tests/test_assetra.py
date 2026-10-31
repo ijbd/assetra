@@ -2494,6 +2494,148 @@ class TestAssetraMarginalContribution(unittest.TestCase):
             self.assertAlmostEqual(0.75, root, delta=1e-12, msg=method)
             self.assertLessEqual(evaluations, limit, msg=method)
 
+    def test_marginal_elcc_policy_errors(self):
+        from assetra.metrics import ExpectedUnservedEnergy, LossOfLoadFrequency
+        from assetra.contribution import MarginalEffectiveLoadCarryingCapability
+
+        def rc(e1, ps, method, step=None, metric=ExpectedUnservedEnergy):
+            return MarginalEffectiveLoadCarryingCapability(e1, ps, metric, perturbation_size=step, method=method)
+
+        class _EUE(ExpectedUnservedEnergy):
+            pass
+
+        # the root search needs risk that never decreases as load is added: exactly EUE, LOLH or LOLD, no subclass
+        e1, ps, r = self._f1()
+        for metric in (LossOfLoadFrequency, _EUE):
+            with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(ValueError, "monotone", msg=metric.__name__):
+                rc(e1, ps, "bisection", metric=metric)
+        for pct in (0, 1):
+            with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(ValueError, "additional_demand_resolution_pct", msg=repr(pct)):
+                rc(e1, ps, "bisection").evaluate(r["static2"], pct)
+        e1, ps, r = self._f1(demand=(50, 50, 50, 50))
+        for method in ("bisection", "secant"):
+            with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(RuntimeWarning, "no risk", msg=method):
+                rc(e1, ps, method).evaluate(r["static2"])
+
+    def test_marginal_elcc_values(self):
+        import numpy as np
+        from assetra.metrics import ExpectedUnservedEnergy as EUE, LossOfLoadHours as LOLH
+        from assetra.contribution import MarginalEffectiveLoadCarryingCapability
+
+        def rc(e1, ps, method, step=None, metric=EUE):
+            return MarginalEffectiveLoadCarryingCapability(e1, ps, metric, perturbation_size=step, method=method)
+
+        # (builder, resource key, step, metric, factor of both methods)
+        cases = [
+            (self._f1, "static2", 1, EUE, 0.75), (self._f1, "static2", None, EUE, 0.75),
+            (self._f1, "fleet", 1, EUE, 43 / 44),  # Review Focus 4: the whole static fleet
+            (self._f2, "static2", 1, EUE, 0.25),
+            (self._f3, "g", 0.5, EUE, 0.5), (self._f3, "g", 4, EUE, 0.25),
+            (self._f3, "h", 1, EUE, 1.0), (self._f3, "gh", 0.5, EUE, 2 / 3),
+            (self._f3, "h", 1, LOLH, 1.0),  # a plateau of baseline risk at the step, which is not crossed
+            (self._f4, "stoch2", 1, EUE, 0.0),
+            (self._f5, "storage2", 0.1, EUE, 0.5), (self._f5, "storage2", 1, EUE, 0.5),
+            (self._f5, "static1", 0.1, EUE, 0.5), (self._f5, "hybrid", 0.2, EUE, 0.5),
+            (self._f6, "storage2", 0.1, EUE, 2.0),  # the bracket expands upward
+            (self._f7, "hydro2", 0.3, EUE, 0.5), (self._f7_two_hydro, "hydro3", 0.3, EUE, 19 / 60),
+            (self._f10, "storage2", 0.225, EUE, -0.2),  # the bracket expands downward
+        ]
+        for case in cases:
+            builder, key, step, metric, expected = case
+            e1, ps, r = builder()
+            for method in ("bisection", "secant"):
+                elcc = rc(e1, ps, method, step, metric)
+                # F4 gives 0 for any draw with an outage; the seed only rules out an outage-free draw
+                np.random.seed(0)
+                observed = elcc.evaluate(r[key])
+                self.assertAlmostEqual(expected, observed, delta=0.01, msg=f"{case} {method}")
+
+    def test_marginal_elcc_counts(self):
+        import numpy as np
+        from assetra.metrics import ExpectedUnservedEnergy as EUE, LossOfLoadHours as LOLH
+        from assetra.contribution import MarginalEffectiveLoadCarryingCapability
+
+        def rc(e1, ps, method, step=None, metric=EUE):
+            return MarginalEffectiveLoadCarryingCapability(e1, ps, metric, perturbation_size=step, method=method)
+
+        # (builder, resource key, step, metric, method, perturbation count)
+        cases = [
+            # F1's bracket [0, step] is guaranteed: bisection halves it 7 times without evaluating its ends; the secant
+            # evaluates both ends, and its first step is the exact root, since g is linear
+            (self._f1, "static2", 1, EUE, "bisection", 7), (self._f1, "static2", 1, EUE, "secant", 3),
+            (self._f1, "static2", None, EUE, "bisection", 7), (self._f1, "static2", None, EUE, "secant", 3),
+            (self._f3, "h", 1, EUE, "secant", 2),  # the exact root at the step
+            # a plateau of baseline risk at the step
+            (self._f3, "h", 1, LOLH, "bisection", 2), (self._f3, "h", 1, LOLH, "secant", 2),
+            (self._f4, "stoch2", 1, EUE, "secant", 2),  # the exact root at 0
+        ]
+        for case in cases:
+            builder, key, step, metric, method, expected = case
+            e1, ps, r = builder()
+            elcc = rc(e1, ps, method, step, metric)
+            np.random.seed(0)
+            elcc.evaluate(r[key])
+            self.assertEqual(expected, elcc.perturbation_count, msg=str(case))
+
+    def test_marginal_elcc_flat_metric(self):
+        from assetra.metrics import LossOfLoadHours
+        from assetra.contribution import MarginalEffectiveLoadCarryingCapability
+        # under LOLH, F1's step of 1 changes no shortfall hour, so g is 0 at both ends; both evaluations are counted
+        e1, ps, r = self._f1()
+        for method in ("bisection", "secant"):
+            elcc = MarginalEffectiveLoadCarryingCapability(e1, ps, LossOfLoadHours, perturbation_size=1, method=method)
+            with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(RuntimeWarning, "does not respond", msg=method):
+                elcc.evaluate(r["static2"])
+            self.assertEqual(2, elcc.perturbation_count, msg=method)
+
+    def test_marginal_elcc_inputs_unchanged_and_reusable(self):  # Review Focus 5
+        import numpy as np
+        from assetra.units import DemandUnit, StaticUnit, StochasticUnit
+        from assetra.metrics import ExpectedUnservedEnergy
+        from assetra.contribution import MarginalEffectiveLoadCarryingCapability
+
+        def rc(e1, ps, method, step=None, metric=ExpectedUnservedEnergy):
+            return MarginalEffectiveLoadCarryingCapability(e1, ps, metric, perturbation_size=step, method=method)
+
+        # neither solver modifies the systems, their datasets or the simulation
+        e1, ps, r = self._f5()
+        resources = r["storage2"]
+        copies = [(system, {t: ds.copy(deep=True) for t, ds in system.unit_datasets.items()}) for system in (e1, resources)]
+        for method in ("bisection", "secant"):
+            rc(e1, ps, method, 0.1).evaluate(resources)
+            for system, datasets in copies:
+                self.assertEqual(list(datasets), list(system.unit_datasets), msg=method)
+                for unit_type, dataset in datasets.items():
+                    self.assertTrue(system.unit_datasets[unit_type].identical(dataset), msg=f"{unit_type.__name__} {method}")
+            self.assertIn("no system assigned", repr(ps), msg=method)
+
+        # one object reused after a call that raised gives an independent result and counts only the latest call
+        e1, ps, r = self._f3()
+        elcc = rc(e1, ps, "secant", 1)
+        with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(ValueError, "additional_demand_resolution_pct"):
+            elcc.evaluate(r["h"], additional_demand_resolution_pct=0)
+        self.assertAlmostEqual(1.0, elcc.evaluate(r["h"]), delta=0.01)
+        self.assertEqual(2, elcc.perturbation_count)
+
+        # every call samples afresh, so the same seed gives the same factor
+        stoch2 = StochasticUnit(id=2, nameplate_capacity=1, hourly_capacity=get_sample_time_series([1] * 4),
+                                hourly_forced_outage_rate=get_sample_time_series([0.5] * 4))
+        e1 = self._system(
+            DemandUnit(id=0, hourly_demand=get_sample_time_series([12] * 4)),
+            StaticUnit(id=1, nameplate_capacity=10, hourly_capacity=get_sample_time_series([10] * 4)),
+            stoch2,
+            StochasticUnit(id=3, nameplate_capacity=4, hourly_capacity=get_sample_time_series([4] * 4),
+                           hourly_forced_outage_rate=get_sample_time_series([0.5] * 4)),
+        )
+        elcc = rc(e1, self._simulation(4, 20), "secant", 0.5)
+        observed, counts = [], []
+        for _ in range(2):
+            np.random.seed(1)
+            observed.append(elcc.evaluate(self._system(stoch2)))
+            counts.append(elcc.perturbation_count)
+        self.assertEqual(observed[0], observed[1])
+        self.assertEqual(counts[0], counts[1])  # reset by every call
+
 #new -- hydrounit tests 
 from assetra.units import HydroUnit
 import pandas as pd
