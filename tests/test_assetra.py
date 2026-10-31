@@ -2148,12 +2148,17 @@ class TestAssetraMarginalContribution(unittest.TestCase):
         e1, ps, r = self._f5()
         ds = e1.unit_datasets[StorageUnit]
         before = ds.copy(deep=True)
-        scaled = _scale_storage_dataset(ds, [2], 1.1)
+        scaled = _scale_storage_dataset(ds, [2], 0.1, 1.0)
         self.assertTrue(ds.identical(before))
-        for v in ("charge_rate", "discharge_rate", "charge_capacity", "nameplate_capacity"):
+        ratings = ("charge_rate", "discharge_rate", "charge_capacity", "nameplate_capacity")
+        for v in ratings:
             self.assertAlmostEqual(1.1, float(scaled[v].sel(energy_unit=2)), delta=1e-12, msg=v)
         self.assertTrue(scaled["initial_soc"].identical(ds["initial_soc"]))
-        self.assertNotIn("initial_soc", _scale_storage_dataset(ds.drop_vars("initial_soc"), [2], 1.1))
+        self.assertNotIn("initial_soc", _scale_storage_dataset(ds.drop_vars("initial_soc"), [2], 0.1, 1.0))
+        # k = 0 empties the units exactly, also for values that are not exact in binary
+        emptied = _scale_storage_dataset(ds.assign({v: ds[v] * 54.8 for v in ratings}), [2], -82.07, 82.07)
+        for v in ratings:
+            self.assertEqual(0.0, float(emptied[v].sel(energy_unit=2)), msg=v)
 
     def test_mri_constructor_errors(self):
         from assetra.metrics import ExpectedUnservedEnergy, LossOfLoadFrequency
@@ -2328,6 +2333,49 @@ class TestAssetraMarginalContribution(unittest.TestCase):
             observed.append(mri.evaluate(self._system(stoch2)))
         self.assertEqual(observed[0], observed[1])
         self.assertEqual(1, mri.perturbation_count)  # reset by every call
+
+    def test_mri_exact_ties_integer_data(self):
+        from assetra.units import DemandUnit, StaticUnit, StochasticUnit
+        from assetra.metrics import ExpectedUnservedEnergy, LossOfLoadHours
+        from assetra.contribution import MarginalReliabilityImpact
+        # F3 with h at nameplate and capacity 49 and demand raised by 47, so N_nr is still [-1, -10, 20, 40]:
+        # as in F3, a step of 1 clears hour 0's deficit exactly in both M(+1) and P(+1), so every factor is 1.0.
+        # The step must be applied multiply-first: 1 / 49 * 49 rounds to 0.9999999999999999.
+        h = StochasticUnit(id=3, nameplate_capacity=49, hourly_capacity=get_sample_time_series([49] * 4),
+                           hourly_forced_outage_rate=get_sample_time_series([0, 0, 1, 1]))
+        e1 = self._system(
+            DemandUnit(id=0, hourly_demand=get_sample_time_series([104, 109, 30, 10])),
+            StaticUnit(id=1, nameplate_capacity=50, hourly_capacity=get_sample_time_series([50] * 4)),
+            StochasticUnit(id=2, nameplate_capacity=4, hourly_capacity=get_sample_time_series([4] * 4),
+                           hourly_forced_outage_rate=get_sample_time_series([0, 1, 1, 1])),
+            h,
+        )
+        ps = self._simulation(4, 3)
+        for metric in (LossOfLoadHours, ExpectedUnservedEnergy):
+            for method in ("forward", "central"):
+                mri = MarginalReliabilityImpact(e1, ps, metric, perturbation_size=1, method=method)
+                self.assertAlmostEqual(1.0, mri.evaluate(self._system(h)), delta=0.01, msg=f"{metric.__name__} {method}")
+
+    def test_mri_exact_ties_integer_storage(self):
+        from assetra.units import DemandUnit, StaticUnit, StorageUnit
+        from assetra.metrics import LossOfLoadHours
+        from assetra.contribution import MarginalReliabilityImpact
+        # Storage 2 is the resource (x_T = 13): rates 13, capacity 13, full; N_nr = [-15, -15]; step 2, LOLH.
+        # M0: discharge 13 -> nets [-2, -15] -> 2. M(+2), k = 15/13: rates and energy 15 clear hour 0 exactly
+        # -> [0, -15] -> 1. P(+2): [-13, -13] -> [0, -13] -> 1. M(-2), k = 11/13: [-4, -15] -> 2.
+        # P(-2): [-17, -17] -> [-4, -17] -> 2. Forward (1 - 2) / (1 - 2) = 1.0; central (1 - 2) / (1 - 2) = 1.0.
+        # The ratings must be scaled multiply-first: 13 * (1 + 2 / 13) rounds to 14.999999999999998.
+        storage2 = StorageUnit(id=2, nameplate_capacity=13, charge_rate=13, discharge_rate=13, charge_capacity=13,
+                               roundtrip_efficiency=1.0, initial_soc=1)
+        e1 = self._system(
+            DemandUnit(id=0, hourly_demand=get_sample_time_series([25, 25])),
+            StaticUnit(id=1, nameplate_capacity=10, hourly_capacity=get_sample_time_series([10, 10])),
+            storage2,
+        )
+        ps = self._simulation(2, 1)
+        for method in ("forward", "central"):
+            mri = MarginalReliabilityImpact(e1, ps, LossOfLoadHours, perturbation_size=2, method=method)
+            self.assertAlmostEqual(1.0, mri.evaluate(self._system(storage2)), delta=0.01, msg=method)
 
 #new -- hydrounit tests 
 from assetra.units import HydroUnit

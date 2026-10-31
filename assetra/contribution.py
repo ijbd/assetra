@@ -260,19 +260,28 @@ def _replay_non_responsive(
 
 
 def _scale_storage_dataset(
-    unit_dataset: xr.Dataset, unit_ids: list[int], scale: float
+    unit_dataset: xr.Dataset,
+    unit_ids: list[int],
+    delta: float,
+    nameplate: float,
 ) -> xr.Dataset:
-    """Return a copy of a storage unit dataset with some of its units scaled.
+    """Return a copy of a storage unit dataset with some of its units
+    enlarged by a signed step.
 
     The charge rate, discharge rate, charge capacity and nameplate capacity
-    of the selected units are multiplied by scale. Their initial state of
-    charge (a fraction, absent in datasets saved before it existed) and
-    roundtrip efficiency are unchanged, so their initial energy scales too.
+    of the selected units are multiplied by k = 1 + delta / nameplate,
+    computed multiply-first as value * (nameplate + delta) / nameplate: a
+    rating that should reach a round value does so exactly on integer data,
+    and k = 0 gives exactly 0. Their initial state of charge (a fraction,
+    absent in datasets saved before it existed) and roundtrip efficiency
+    are unchanged, so their initial energy scales too.
 
     Args:
         unit_dataset (xr.Dataset): Storage unit dataset. It is not modified.
-        unit_ids (list[int]): Ids of the units to scale.
-        scale (float): Factor applied to the selected units.
+        unit_ids (list[int]): Ids of the units to enlarge.
+        delta (float): Signed step in units of power.
+        nameplate (float): Total nameplate capacity to which the step is
+            relative.
 
     Returns:
         xr.Dataset: New storage unit dataset, with the units in the same
@@ -282,7 +291,9 @@ def _scale_storage_dataset(
     return unit_dataset.assign(
         {
             name: xr.where(
-                selected, unit_dataset[name] * scale, unit_dataset[name]
+                selected,
+                unit_dataset[name] * (nameplate + delta) / nameplate,
+                unit_dataset[name],
             )
             for name in (
                 "charge_rate",
@@ -540,6 +551,9 @@ class _MarginalContributionMetric(ResourceContributionMetric):
         The resources' non-responsive output and storage units are scaled by
         1 + delta / nameplate capacity, and the load is subtracted after the
         non-responsive units, before the responsive units are re-dispatched.
+        The increment is computed multiply-first, as output * delta /
+        nameplate, so that on integer data a shortfall the step clears
+        exactly becomes exactly 0, as it does with the perfect resource.
 
         Args:
             baseline (_MarginalBaseline): Baseline of the evaluate() call.
@@ -550,13 +564,13 @@ class _MarginalContributionMetric(ResourceContributionMetric):
         Returns:
             float: Evaluated resource adequacy metric.
         """
-        fraction = delta / baseline.nameplate
         return self._responsive_risk(
             baseline.non_responsive_net
-            + fraction * baseline.resource_output
+            + baseline.resource_output * delta / baseline.nameplate
             - load,
             baseline.storage_ids,
-            1 + fraction,
+            delta,
+            baseline.nameplate,
         )
 
     def _perfect_risk(
@@ -579,7 +593,8 @@ class _MarginalContributionMetric(ResourceContributionMetric):
         self,
         net_hourly_capacity_matrix: xr.DataArray,
         storage_ids: tuple[int, ...] = (),
-        scale: float = 1.0,
+        delta: float = 0.0,
+        nameplate: float = 1.0,
     ) -> float:
         """Dispatch the base system's responsive units onto a net hourly
         capacity matrix and return the resulting resource adequacy.
@@ -588,9 +603,11 @@ class _MarginalContributionMetric(ResourceContributionMetric):
             net_hourly_capacity_matrix (xr.DataArray): Net hourly capacity
                 matrix after the non-responsive units. It is not modified.
             storage_ids (tuple[int, ...], optional): Ids of the storage units
-                to scale. Defaults to none.
-            scale (float, optional): Factor applied to those storage units.
-                Defaults to 1.
+                to enlarge. Defaults to none.
+            delta (float, optional): Signed step by which those storage units
+                are enlarged, in units of power. Defaults to 0.
+            nameplate (float, optional): Total nameplate capacity to which
+                the step is relative. Defaults to 1.
 
         Returns:
             float: Evaluated resource adequacy metric.
@@ -604,7 +621,7 @@ class _MarginalContributionMetric(ResourceContributionMetric):
                 continue
             if unit_type is StorageUnit and storage_ids:
                 unit_dataset = _scale_storage_dataset(
-                    unit_dataset, list(storage_ids), scale
+                    unit_dataset, list(storage_ids), delta, nameplate
                 )
             unit_datasets[unit_type] = unit_dataset
 
