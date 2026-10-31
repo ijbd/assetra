@@ -1,5 +1,6 @@
 from logging import getLogger
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 import math
 import numbers
@@ -26,6 +27,11 @@ _SUPPORTED_RESOURCE_TYPES = (StaticUnit, StochasticUnit, HydroUnit, StorageUnit)
 
 # default perturbation step, as a fraction of the resources' nameplate capacity
 _DEFAULT_STEP_FRACTION = 0.01
+
+# caps of the root search: doublings of its bracket in each direction, and
+# secant iterations
+_MAX_DOUBLINGS = 10
+_MAX_ITERATIONS = 100
 
 
 class ResourceContributionMetric(ABC):
@@ -303,6 +309,196 @@ def _scale_storage_dataset(
             )
         }
     )
+
+
+def _find_largest_root(
+    g: Callable[[float], float],
+    upper: float,
+    tolerance: float,
+    method: str,
+    guaranteed: bool,
+    zero_tolerance: float,
+    exact_root: bool,
+) -> tuple[float, int]:
+    """Find the largest root of a non-decreasing function, by bisection or a
+    safeguarded secant.
+
+    The root is the largest c with g(c) <= zero_tolerance, searched for from
+    the bracket [0, upper]. A value of g within zero_tolerance of 0 counts as
+    0, and such ties move the lower end of the bracket.
+
+    Unless the bracket is guaranteed and the method is bisection (which then
+    evaluates neither end), g is evaluated at 0 and then at upper, and the
+    bracket is set up as follows:
+
+    - If g is within zero_tolerance of 0 at both ends, g does not respond and
+      RuntimeWarning is raised.
+    - With exact_root, a root at 0 is returned.
+    - While g at the lower end is above zero_tolerance, the bracket expands
+      downward: its lower end becomes its upper end, and the new lower end is
+      below it by upper, 2 * upper, 4 * upper, and so on.
+    - While g at the upper end is below -zero_tolerance, the bracket expands
+      upward: its upper end becomes its lower end, and the new upper end is
+      twice as far from 0.
+    - Each expansion is capped at _MAX_DOUBLINGS doublings, past which
+      RuntimeWarning is raised.
+    - If g at the upper end is then within zero_tolerance of 0, that end is
+      returned: either the exact root, or a plateau where g is 0, which the
+      search does not cross.
+
+    Bisection then halves the bracket until its width is at most tolerance,
+    and returns the midpoint of the final bracket. The secant takes each next
+    point from the secant line through the two most recent points. As in
+    Dekker's method, it takes a bisection step instead when the denominator
+    is 0, when the point is not strictly inside the bracket, or when the
+    previous step did not halve the bracket, which bounds the cost at about
+    twice that of bisection. A step from the latest point shorter than
+    tolerance / 2 becomes a step of tolerance / 2 towards the far end of the
+    bracket, so that the bracket closes from both sides. It stops when the
+    width of the bracket is at most tolerance, returning its midpoint, or,
+    with exact_root, as soon as g is within zero_tolerance of 0, returning
+    that point. It is capped at _MAX_ITERATIONS iterations, past which
+    RuntimeWarning is raised.
+
+    Args:
+        g (Callable[[float], float]): Non-decreasing function. Every call
+            counts as one evaluation.
+        upper (float): Upper end of the initial bracket [0, upper], greater
+            than 0, which is also the first step of its expansion.
+        tolerance (float): Width of the bracket at which the search stops.
+        method (str): "bisection" or "secant".
+        guaranteed (bool): Whether g(0) <= zero_tolerance <= g(upper) is
+            guaranteed, so that bisection can start from [0, upper] without
+            evaluating g at either end. The secant evaluates both ends
+            whatever the value.
+        zero_tolerance (float): Tie tolerance: values of g within this
+            distance of 0 count as 0.
+        exact_root (bool): Whether a point where g is within zero_tolerance of
+            0 is the root itself, because g increases strictly through it, so
+            that a root at 0, or a point of the secant, ends the search.
+            Otherwise such a point may lie on a plateau where g is 0, and the
+            search goes on to look for the end of that plateau.
+
+    Returns:
+        tuple[float, int]: The root, and the number of evaluations of g,
+            including the start points, expansion points, midpoints and
+            iterates.
+
+    Raises:
+        RuntimeWarning: g is within zero_tolerance of 0 at both 0 and upper
+            (it does not respond); the bracket does not contain the root
+            after _MAX_DOUBLINGS doublings in one direction; or the secant
+            has not closed the bracket after _MAX_ITERATIONS iterations.
+    """
+    evaluations = 0
+
+    def evaluate(c: float) -> float:
+        nonlocal evaluations
+        evaluations += 1
+        return g(c)
+
+    lo, hi = 0.0, float(upper)
+    points = []  # (c, g(c)) in evaluation order
+
+    if not (guaranteed and method == "bisection"):
+        # evaluate both ends, in this order, before any other test
+        g_lo = evaluate(lo)
+        g_hi = evaluate(hi)
+        points = [(lo, g_lo), (hi, g_hi)]
+        if abs(g_lo) <= zero_tolerance and abs(g_hi) <= zero_tolerance:
+            message = (
+                f"The metric does not respond to a step of {upper}; increase "
+                "perturbation_size or use ExpectedUnservedEnergy"
+            )
+            LOG.error(message)
+            raise RuntimeWarning(message)
+        if exact_root and abs(g_lo) <= zero_tolerance:
+            return lo, evaluations
+
+        # expand downward while g(lo) is above 0, by upper, 2 * upper, ...
+        doublings = 0
+        while g_lo > zero_tolerance:
+            if doublings == _MAX_DOUBLINGS:
+                message = (
+                    f"Could not bracket the root: g is still above 0 at {lo} "
+                    f"after {_MAX_DOUBLINGS} doublings of the bracket downward"
+                )
+                LOG.error(message)
+                raise RuntimeWarning(message)
+            hi, g_hi = lo, g_lo
+            lo -= upper * 2**doublings
+            g_lo = evaluate(lo)
+            points.append((lo, g_lo))
+            doublings += 1
+
+        # expand upward while g(hi) is below 0, doubling the upper end
+        doublings = 0
+        while g_hi < -zero_tolerance:
+            if doublings == _MAX_DOUBLINGS:
+                message = (
+                    f"Could not bracket the root: g is still below 0 at {hi} "
+                    f"after {_MAX_DOUBLINGS} doublings of the bracket upward"
+                )
+                LOG.error(message)
+                raise RuntimeWarning(message)
+            lo = hi
+            hi *= 2
+            g_hi = evaluate(hi)
+            points.append((hi, g_hi))
+            doublings += 1
+
+        # an exact root, or a plateau of g = 0 that is not crossed
+        if abs(g_hi) <= zero_tolerance:
+            return hi, evaluations
+
+    if method == "bisection":
+        while hi - lo > tolerance:
+            midpoint = (lo + hi) / 2
+            if evaluate(midpoint) <= zero_tolerance:
+                lo = midpoint
+            else:
+                hi = midpoint
+        return (lo + hi) / 2, evaluations
+
+    # secant, with a bisection step whenever the previous step did not halve
+    # the bracket
+    bisect_next = False
+    iterations = 0
+    while hi - lo > tolerance:
+        if iterations == _MAX_ITERATIONS:
+            message = (
+                f"The root search did not converge in {_MAX_ITERATIONS} "
+                f"iterations: the bracket [{lo}, {hi}] is wider than the "
+                f"tolerance {tolerance}"
+            )
+            LOG.error(message)
+            raise RuntimeWarning(message)
+        iterations += 1
+
+        (c1, g1), (c2, g2) = points[-2:]
+        if bisect_next or g1 == g2:
+            c = (lo + hi) / 2
+        else:
+            c = c2 - g2 * (c2 - c1) / (g2 - g1)
+        if not lo < c < hi:
+            c = (lo + hi) / 2
+        elif abs(c - c2) < tolerance / 2:
+            # the latest point is an end of the bracket: step away from it
+            far_end = lo if c2 == hi else hi
+            c = c2 + math.copysign(tolerance / 2, far_end - c2)
+
+        g_c = evaluate(c)
+        points.append((c, g_c))
+        if exact_root and abs(g_c) <= zero_tolerance:
+            return c, evaluations
+
+        width = hi - lo
+        if g_c <= zero_tolerance:
+            lo = c
+        else:
+            hi = c
+        bisect_next = hi - lo > width / 2
+    return (lo + hi) / 2, evaluations
 
 
 @dataclass(frozen=True)

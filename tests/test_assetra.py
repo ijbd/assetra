@@ -2377,6 +2377,105 @@ class TestAssetraMarginalContribution(unittest.TestCase):
             mri = MarginalReliabilityImpact(e1, ps, LossOfLoadHours, perturbation_size=2, method=method)
             self.assertAlmostEqual(1.0, mri.evaluate(self._system(storage2)), delta=0.01, msg=method)
 
+    def test_root_linear(self):
+        from assetra.contribution import _find_largest_root
+
+        def g(c):
+            return 2 * c - 1.5
+
+        # guaranteed bracket [0, 1]: bisection evaluates neither end, the secant evaluates both and its first step is the root
+        root, evaluations = _find_largest_root(g, 1, 0.01, "bisection", True, 1.5e-8, True)
+        self.assertAlmostEqual(0.75, root, delta=0.005, msg="bisection")
+        self.assertEqual(7, evaluations, msg="bisection")
+        root, evaluations = _find_largest_root(g, 1, 0.01, "secant", True, 1.5e-8, True)
+        self.assertAlmostEqual(0.75, root, places=12, msg="secant")
+        self.assertEqual(3, evaluations, msg="secant")
+
+    def test_root_flat(self):
+        from assetra.contribution import _find_largest_root
+
+        for method in ("bisection", "secant"):
+            with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(RuntimeWarning, "does not respond", msg=method):
+                _find_largest_root(lambda c: 0.0, 1, 0.01, method, False, 0.0, False)
+
+    def test_root_plateau(self):
+        from assetra.contribution import _find_largest_root
+
+        def g(c):  # below 0 up to c = 0, a plateau of 0 up to c = 20, above 0 beyond
+            return -1.0 if c <= 0 else (0.0 if c <= 20 else 1.0)
+
+        # g(1) is on the plateau: the search stops there and does not cross it
+        for method in ("bisection", "secant"):
+            root, evaluations = _find_largest_root(g, 1, 0.01, method, False, 0.0, False)
+            self.assertAlmostEqual(1.0, root, delta=1e-12, msg=method)
+            self.assertEqual(2, evaluations, msg=method)
+
+    def test_root_upward_expansion(self):
+        from assetra.contribution import _find_largest_root
+
+        def g(c):
+            return 2 * c - 0.4
+
+        # g(0.1) < 0, so the upper end doubles to 0.2, where g is 0: the root, found with the third evaluation
+        for method in ("bisection", "secant"):
+            root, evaluations = _find_largest_root(g, 0.1, 0.001, method, False, 2e-9, True)
+            self.assertAlmostEqual(0.2, root, delta=1e-12, msg=method)
+            self.assertEqual(3, evaluations, msg=method)
+
+    def test_root_downward_expansion(self):
+        from assetra.contribution import _find_largest_root
+
+        def g(c):
+            return 2 * c + 0.09
+
+        # g(0) > 0, so the lower end moves down to -0.225 and the bracket is [-0.225, 0]. Bisection halves it 7 times
+        # (0.225 / 0.00225 = 100 < 2 ** 7), after 3 evaluations; the secant through the last two points is the root
+        for method, expected_evaluations in (("bisection", 10), ("secant", 4)):
+            root, evaluations = _find_largest_root(g, 0.225, 0.00225, method, False, 1e-10, True)
+            self.assertAlmostEqual(-0.045, root, delta=0.00113, msg=method)
+            self.assertEqual(expected_evaluations, evaluations, msg=method)
+
+    def test_root_expansion_cap(self):
+        from assetra.contribution import _find_largest_root, _MAX_DOUBLINGS, _MAX_ITERATIONS
+
+        def recorded(g, calls):
+            def recording_g(c):
+                calls.append(c)
+                return g(c)
+
+            return recording_g
+
+        # g stays below 0 however far the upper end doubles, or above 0 however far the lower end moves down: both ends
+        # are evaluated, then _MAX_DOUBLINGS expansions (the upper end doubles, the lower end moves down by 1, 2, 4, ...)
+        doublings = range(1, _MAX_DOUBLINGS + 1)
+        for method in ("bisection", "secant"):
+            for value, expansions in ((-1.0, [2**k for k in doublings]), (1.0, [1 - 2**k for k in doublings])):
+                calls = []
+                with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(RuntimeWarning, "bracket", msg=f"{method} {value}"):
+                    _find_largest_root(recorded(lambda c: value, calls), 1, 0.01, method, False, 0.0, False)
+                self.assertEqual([0, 1] + expansions, calls, msg=f"{method} {value}")
+
+        # the secant also gives up, after _MAX_ITERATIONS steps, when the bracket never closes (a zero tolerance)
+        calls = []
+        with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(RuntimeWarning, "converge"):
+            _find_largest_root(recorded(lambda c: 2 * c - 1.5, calls), 1, 0.0, "secant", False, 1.5e-8, False)
+        self.assertEqual(2 + _MAX_ITERATIONS, len(calls))
+
+    def test_root_secant_steep_convex(self):
+        from assetra.contribution import _find_largest_root
+
+        def g(c):
+            return 0.01 * (c - 0.5) if c < 0.5 else 100 * (c - 0.5)
+
+        # the bisection steps that safeguard the secant bound its cost near twice the bisection's
+        for method in ("bisection", "secant"):
+            root, evaluations = _find_largest_root(g, 10, 0.1, method, True, 0.0, False)
+            self.assertAlmostEqual(0.5, root, delta=0.1, msg=method)
+            if method == "bisection":
+                self.assertEqual(7, evaluations, msg=method)
+            else:
+                self.assertLessEqual(evaluations, 16, msg=method)
+
 #new -- hydrounit tests 
 from assetra.units import HydroUnit
 import pandas as pd
