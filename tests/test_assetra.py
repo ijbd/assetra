@@ -2111,5 +2111,27 @@ class TestHydroUnit(unittest.TestCase):
         self.assertEqual(adjusted_matrix.dims, net_hourly_capacity_matrix.dims, 
                          "Adjusted matrix dimensions do not match.")
         self.assertEqual(len(adjusted_matrix['trial']), 10, "Unexpected number of trials.")
+
+    def test_hydro_list_to_dataset(self):
+        """Hydro unit ids are stored as the energy_unit coordinate."""
+        unit = HydroUnit(id=7, nameplate_capacity=3,
+                         monthly_expected_generation=xr.DataArray([3.0] * 12, coords=dict(month=list(range(1, 13)))))
+        dataset = HydroUnit.to_unit_dataset([unit])
+        self.assertIn("energy_unit", dataset.coords)
+        self.assertEqual([7], [int(i) for i in dataset.energy_unit.values])
+
+    def test_hydro_dataset_to_list(self):
+        """Hydro unit ids survive from_unit_dataset and from_energy_system."""
+        from assetra.units import DemandUnit
+        from assetra.system import EnergySystemBuilder
+        unit = HydroUnit(id=7, nameplate_capacity=3,
+                         monthly_expected_generation=xr.DataArray([3.0] * 12, coords=dict(month=list(range(1, 13)))))
+        self.assertEqual(7, HydroUnit.from_unit_dataset(HydroUnit.to_unit_dataset([unit]))[0].id)
+        b1 = EnergySystemBuilder()
+        b1.add_unit(DemandUnit(id=0, hourly_demand=get_sample_time_series([1, 1, 1])))
+        b1.add_unit(unit)
+        b2 = EnergySystemBuilder.from_energy_system(b1.build())  # raised a duplicate-id RuntimeWarning before the fix
+        self.assertIn(7, [u.id for u in b2.energy_units])
+
 if __name__ == "__main__":
     unittest.main()
