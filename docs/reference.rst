@@ -184,25 +184,25 @@ The resources to accredit are passed to *evaluate()* as an *EnergySystem* of uni
 
 **Methods**
 
-The :code:`method` keyword selects how the factor is computed. In the table, *M* is the resource adequacy with the resources enlarged by a signed step (reduced, for a negative step), *P* is the resource adequacy with a perfect resource of that signed size added instead, and *M0* is the baseline resource adequacy.
+The :code:`method` keyword selects how the factor is computed. In the table, *M* is the resource adequacy with the resources enlarged by a signed step (reduced, for a negative step), *P* is the resource adequacy with a perfect resource of that signed size added instead, and *M0* is the baseline resource adequacy. The resolution of the marginal ELCC's load search is :code:`additional_demand_resolution_pct` (default 0.01) times the step.
 
 .. list-table::
    :header-rows: 1
    :widths: 28 44 28
 
-   * - Class and :code:`method`
+   * - Metric and :code:`method`
      - Factor
      - Perturbed evaluations (N_p)
-   * - *MarginalReliabilityImpact*, :code:`"forward"` (default)
+   * - *MRI*, :code:`"forward"` (default)
      - :code:`(M(+step) - M0) / (P(+step) - M0)`
      - 1
-   * - *MarginalReliabilityImpact*, :code:`"central"`
+   * - *MRI*, :code:`"central"`
      - :code:`(M(+step) - M(-step)) / (P(+step) - P(-step))`
      - 2
-   * - *MarginalEffectiveLoadCarryingCapability*, :code:`"bisection"` (default)
-     - The load of the marginal ELCC definition, divided by the step, found by halving a bracket of loads until it is no wider than the resolution, :code:`additional_demand_resolution_pct` (default 0.01) times the step.
+   * - *Marginal ELCC*, :code:`"bisection"` (default)
+     - The load of the marginal ELCC definition, divided by the step, found by halving a bracket of loads until it is no wider than the resolution.
      - 7 at the default resolution when the bracket :code:`[0, step]` is known to hold the load in advance (conditions in the class docstring). Otherwise both ends of the bracket are evaluated first, and the bracket is expanded if it does not hold the load.
-   * - *MarginalEffectiveLoadCarryingCapability*, :code:`"secant"`
+   * - *Marginal ELCC*, :code:`"secant"`
      - The same load, found with the secant method of [4]_ (eq. 17), safeguarded by a bisection step whenever the secant step is undefined or would leave the bracket, or the previous step did not halve the bracket.
      - Depends on the data: often lower than bisection (3 when the risk is linear in the load), and at most about twice the bisection's N_p plus 2.
 
