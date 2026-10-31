@@ -2105,7 +2105,7 @@ class TestAssetraMarginalContribution(unittest.TestCase):
             _resource_unit_ids(e1, self._system(DemandUnit(id=0, hourly_demand=get_sample_time_series([110, 120, 80, 70]))))
         with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(ValueError, "not in the base system"):
             _resource_unit_ids(e1, self._system(StaticUnit(id=9, nameplate_capacity=1, hourly_capacity=get_sample_time_series([1] * 4))))
-        # Review Focus 1: a distinct but equal object matches; the same id under another type does not
+        # a distinct but equal object matches; the same id under another type does not
         equal = self._system(StaticUnit(id=2, nameplate_capacity=10, hourly_capacity=get_sample_time_series([5, 10, 0, 10])))
         self.assertEqual({StaticUnit: [2]}, _resource_unit_ids(e1, equal))
         with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(ValueError, "not in the base system"):
@@ -2115,6 +2115,10 @@ class TestAssetraMarginalContribution(unittest.TestCase):
         no_ids = EnergySystem({**e7.unit_datasets, HydroUnit: e7.unit_datasets[HydroUnit].drop_vars("energy_unit")})
         with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(ValueError, "unit ids"):
             _resource_unit_ids(no_ids, r7["hydro2"])
+        # the resources' own hydro dataset without ids raises as well, against a base system that has them
+        resources_no_ids = EnergySystem({HydroUnit: r7["hydro2"].unit_datasets[HydroUnit].drop_vars("energy_unit")})
+        with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(ValueError, "unit ids"):
+            _resource_unit_ids(e7, resources_no_ids)
 
     def test_replay_static(self):
         import numpy as np
@@ -2181,6 +2185,7 @@ class TestAssetraMarginalContribution(unittest.TestCase):
         self.assertEqual(0, rc(e1, ps, "forward", metric=LossOfLoadFrequency).perturbation_count)
 
     def test_mri_values(self):
+        import math
         import numpy as np
         from assetra.metrics import ExpectedUnservedEnergy as EUE, LossOfLoadHours as LOLH
         from assetra.contribution import MarginalReliabilityImpact
@@ -2191,7 +2196,7 @@ class TestAssetraMarginalContribution(unittest.TestCase):
         # (builder, resource key, step, metric, forward, central)
         cases = [
             (self._f1, "static2", 1, EUE, 0.75, 0.75), (self._f1, "static2", None, EUE, 0.75, 0.75),
-            (self._f1, "fleet", 1, EUE, 43 / 44, 43 / 44),  # Review Focus 4: the whole static fleet
+            (self._f1, "fleet", 1, EUE, 43 / 44, 43 / 44),  # the whole static fleet
             (self._f2, "static2", 1, EUE, 0.5, 1 / 3),
             (self._f3, "g", 0.5, EUE, 0.5, 0.5), (self._f3, "g", 4, EUE, 0.2, 5 / 13),
             (self._f3, "h", 1, EUE, 1.0, 1.0), (self._f3, "gh", 0.5, EUE, 2 / 3, 2 / 3),
@@ -2213,19 +2218,22 @@ class TestAssetraMarginalContribution(unittest.TestCase):
                 observed = mri.evaluate(r[key])
                 self.assertAlmostEqual(expected, observed, delta=0.01, msg=f"{case} {method}")
                 self.assertEqual(count, mri.perturbation_count, msg=f"{case} {method}")
+                if expected == 0:  # no effect: an exact 0 is 0.0, never -0.0 (copysign reads the sign of a zero)
+                    self.assertEqual(1.0, math.copysign(1.0, observed), msg=f"{case} {method}")
 
     def test_mri_errors(self):
         from assetra.units import StaticUnit
-        from assetra.metrics import ExpectedUnservedEnergy, LossOfLoadHours
+        from assetra.metrics import ExpectedUnservedEnergy, LossOfLoadDays, LossOfLoadHours
         from assetra.contribution import MarginalReliabilityImpact
 
         def rc(e1, ps, method, step=None, metric=ExpectedUnservedEnergy):
             return MarginalReliabilityImpact(e1, ps, metric, perturbation_size=step, method=method)
 
         e1, ps, r = self._f1()
-        for method in ("forward", "central"):
-            with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(RuntimeWarning, "does not respond", msg=method):
-                rc(e1, ps, method, 1, LossOfLoadHours).evaluate(r["static2"])
+        for metric in (LossOfLoadHours, LossOfLoadDays):
+            for method in ("forward", "central"):
+                with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(RuntimeWarning, "does not respond", msg=f"{metric.__name__} {method}"):
+                    rc(e1, ps, method, 1, metric).evaluate(r["static2"])
         e1, ps, r = self._f1(demand=(50, 50, 50, 50))
         for method in ("forward", "central"):
             with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(RuntimeWarning, "no risk", msg=method):
@@ -2255,7 +2263,7 @@ class TestAssetraMarginalContribution(unittest.TestCase):
                 self.assertTrue(system.unit_datasets[unit_type].identical(dataset), msg=unit_type.__name__)
         self.assertIn("no system assigned", repr(ps))
 
-    def test_mri_loaded_and_trimmed_systems(self):  # Review Focus 2 and 3
+    def test_mri_loaded_and_trimmed_systems(self):
         import tempfile
         import warnings
         from pathlib import Path
@@ -2283,7 +2291,7 @@ class TestAssetraMarginalContribution(unittest.TestCase):
         e1, ps, r = self._f1(extra_hours=2)
         self.assertAlmostEqual(0.75, rc(e1, ps, "forward", 1).evaluate(r["static2"]), delta=0.01)
 
-    def test_mri_reuse_after_error(self):  # Review Focus 5
+    def test_mri_reuse_after_error(self):
         from assetra.metrics import ExpectedUnservedEnergy
         from assetra.contribution import MarginalReliabilityImpact
         e1, ps, r = self._f3()
@@ -2468,7 +2476,9 @@ class TestAssetraMarginalContribution(unittest.TestCase):
         def g(c):
             return 0.01 * (c - 0.5) if c < 0.5 else 100 * (c - 0.5)
 
-        # the bisection steps that safeguard the secant bound its cost near twice the bisection's
+        # the secant finds the root of a steep convex g (slopes of 0.01 below it and 100 above it) within the tolerance,
+        # in at most twice the bisection's evaluations plus 2. The bound is loose: the secant meets it without its halving
+        # safeguard too, which test_root_secant_halving_safeguard pins
         for method in ("bisection", "secant"):
             root, evaluations = _find_largest_root(g, 10, 0.1, method, True, 0.0, False)
             self.assertAlmostEqual(0.5, root, delta=0.1, msg=method)
@@ -2476,6 +2486,22 @@ class TestAssetraMarginalContribution(unittest.TestCase):
                 self.assertEqual(7, evaluations, msg=method)
             else:
                 self.assertLessEqual(evaluations, 16, msg=method)
+
+    def test_root_secant_halving_safeguard(self):
+        from assetra.contribution import _find_largest_root
+
+        def g(c):  # a triple root at 1.5, where the secant converges slowly
+            return (c - 1.5) ** 3
+
+        # bisection halves [0, 10] 14 times to a width below 1e-3. The secant takes a bisection step whenever its previous
+        # step did not halve the bracket, which bounds its cost at twice the bisection's plus the 2 end evaluations:
+        # 2 * 14 + 2 = 30. It takes 20, and 32 without that rule
+        root, evaluations = _find_largest_root(g, 10, 1e-3, "bisection", True, 0.0, False)
+        self.assertAlmostEqual(1.5, root, delta=1e-3, msg="bisection")
+        self.assertEqual(14, evaluations, msg="bisection")
+        root, evaluations = _find_largest_root(g, 10, 1e-3, "secant", True, 0.0, False)
+        self.assertAlmostEqual(1.5, root, delta=1e-3, msg="secant")
+        self.assertLessEqual(evaluations, 2 * 14 + 2, msg="secant")
 
     def test_root_float_resolution(self):
         from assetra.contribution import _find_largest_root, _MAX_ITERATIONS
@@ -2518,6 +2544,7 @@ class TestAssetraMarginalContribution(unittest.TestCase):
                 rc(e1, ps, method).evaluate(r["static2"])
 
     def test_marginal_elcc_values(self):
+        import math
         import numpy as np
         from assetra.metrics import ExpectedUnservedEnergy as EUE, LossOfLoadHours as LOLH
         from assetra.contribution import MarginalEffectiveLoadCarryingCapability
@@ -2528,7 +2555,7 @@ class TestAssetraMarginalContribution(unittest.TestCase):
         # (builder, resource key, step, metric, factor of both methods)
         cases = [
             (self._f1, "static2", 1, EUE, 0.75), (self._f1, "static2", None, EUE, 0.75),
-            (self._f1, "fleet", 1, EUE, 43 / 44),  # Review Focus 4: the whole static fleet
+            (self._f1, "fleet", 1, EUE, 43 / 44),  # the whole static fleet
             (self._f2, "static2", 1, EUE, 0.25),
             (self._f3, "g", 0.5, EUE, 0.5), (self._f3, "g", 4, EUE, 0.25),
             (self._f3, "h", 1, EUE, 1.0), (self._f3, "gh", 0.5, EUE, 2 / 3),
@@ -2549,6 +2576,8 @@ class TestAssetraMarginalContribution(unittest.TestCase):
                 np.random.seed(0)
                 observed = elcc.evaluate(r[key])
                 self.assertAlmostEqual(expected, observed, delta=0.01, msg=f"{case} {method}")
+                if expected == 0:  # F4's secant ends on an exact root at 0, which is 0.0, never -0.0
+                    self.assertEqual(1.0, math.copysign(1.0, observed), msg=f"{case} {method}")
 
     def test_marginal_elcc_counts(self):
         import numpy as np
@@ -2578,17 +2607,61 @@ class TestAssetraMarginalContribution(unittest.TestCase):
             self.assertEqual(expected, elcc.perturbation_count, msg=str(case))
 
     def test_marginal_elcc_flat_metric(self):
+        from assetra.metrics import LossOfLoadDays, LossOfLoadHours
+        from assetra.contribution import MarginalEffectiveLoadCarryingCapability
+        # under LOLH and LOLD, F1's step of 1 changes no shortfall hour or day, so g is 0 at both ends; both evaluations are counted
+        e1, ps, r = self._f1()
+        for metric in (LossOfLoadHours, LossOfLoadDays):
+            for method in ("bisection", "secant"):
+                elcc = MarginalEffectiveLoadCarryingCapability(e1, ps, metric, perturbation_size=1, method=method)
+                with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(RuntimeWarning, "does not respond", msg=f"{metric.__name__} {method}"):
+                    elcc.evaluate(r["static2"])
+                self.assertEqual(2, elcc.perturbation_count, msg=f"{metric.__name__} {method}")
+
+    def test_marginal_elcc_largest_root_of_a_plateau(self):
         from assetra.metrics import LossOfLoadHours
         from assetra.contribution import MarginalEffectiveLoadCarryingCapability
-        # under LOLH, F1's step of 1 changes no shortfall hour, so g is 0 at both ends; both evaluations are counted
-        e1, ps, r = self._f1()
-        for method in ("bisection", "secant"):
-            elcc = MarginalEffectiveLoadCarryingCapability(e1, ps, LossOfLoadHours, perturbation_size=1, method=method)
-            with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(RuntimeWarning, "does not respond", msg=method):
-                elcc.evaluate(r["static2"])
-            self.assertEqual(2, elcc.perturbation_count, msg=method)
 
-    def test_marginal_elcc_inputs_unchanged_and_reusable(self):  # Review Focus 5
+        # F7 under LOLH with a step of 2: g is 0 on [0, 1] and 1 beyond, so the largest load with g <= 0 is 1 and the factor
+        # is 1 / 2. Ties (g = 0) must move the lower end of the bracket, or the search settles near 0 (a factor of 0.004).
+        # The secant meets equal values of g beyond the root (both 1), where it must take a bisection step instead of
+        # dividing by 0. Both ends of [0, 2] are evaluated, and 7 halvings bring its width (2 / 2 ** 7) below the resolution
+        # of 0.02: 9 evaluations for both methods
+        e1, ps, r = self._f7()
+        for method in ("bisection", "secant"):
+            elcc = MarginalEffectiveLoadCarryingCapability(e1, ps, LossOfLoadHours, perturbation_size=2, method=method)
+            self.assertAlmostEqual(0.5, elcc.evaluate(r["hydro2"]), delta=0.01, msg=method)
+            self.assertEqual(9, elcc.perturbation_count, msg=method)
+
+    def test_output_above_nameplate(self):
+        from assetra.units import DemandUnit, StaticUnit
+        from assetra.metrics import ExpectedUnservedEnergy
+        from assetra.contribution import MarginalEffectiveLoadCarryingCapability, MarginalReliabilityImpact
+
+        # F1 with a demand of 130 in hour 1, where the resource (nameplate capacity 10) produces 20: N_nr = [-5, -10, 20, 40],
+        # and its availability in the two shortfall hours is 0.5 and 2, mean 1.25, so every method gives 1.25 and
+        # g(c) = 2 c - 2.5. With output above its nameplate capacity, the bracket [0, step] does not hold the root (g(1) < 0),
+        # so the ELCC must evaluate the ends of its bracket instead of assuming them (bisection would return 0.996).
+        # ELCC bisection takes 2 ends + 1 upward expansion + 7 halvings = 10 evaluations, and the secant 4
+        static2 = StaticUnit(id=2, nameplate_capacity=10, hourly_capacity=get_sample_time_series([5, 20, 0, 10]))
+        e1 = self._system(
+            DemandUnit(id=0, hourly_demand=get_sample_time_series([110, 130, 80, 70])),
+            StaticUnit(id=1, nameplate_capacity=100, hourly_capacity=get_sample_time_series([100] * 4)),
+            static2,
+        )
+        ps = self._simulation(4, 2)
+        resources = self._system(static2)
+        # (metric class, method, perturbation count)
+        cases = [
+            (MarginalReliabilityImpact, "forward", 1), (MarginalReliabilityImpact, "central", 2),
+            (MarginalEffectiveLoadCarryingCapability, "bisection", 10), (MarginalEffectiveLoadCarryingCapability, "secant", 4),
+        ]
+        for metric, method, count in cases:
+            accreditation = metric(e1, ps, ExpectedUnservedEnergy, perturbation_size=1, method=method)
+            self.assertAlmostEqual(1.25, accreditation.evaluate(resources), delta=0.01, msg=f"{metric.__name__} {method}")
+            self.assertEqual(count, accreditation.perturbation_count, msg=f"{metric.__name__} {method}")
+
+    def test_marginal_elcc_inputs_unchanged_and_reusable(self):
         import numpy as np
         from assetra.units import DemandUnit, StaticUnit, StochasticUnit
         from assetra.metrics import ExpectedUnservedEnergy

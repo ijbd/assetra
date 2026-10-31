@@ -1020,7 +1020,9 @@ class MarginalReliabilityImpact(_MarginalContributionMetric):
         else:
             lower = baseline.risk
 
-        factor = (upper - lower) / denominator
+        # adding 0.0 turns a factor of -0.0 (no effect, over a negative
+        # denominator) into 0.0, and leaves every other value unchanged
+        factor = (upper - lower) / denominator + 0.0
         LOG.info("Marginal reliability impact: " + str(factor))
         return factor
 
