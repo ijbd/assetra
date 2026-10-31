@@ -822,7 +822,7 @@ class HydroUnit(EnergyUnit):
             ]
             dataset["hourly_forced_outage_rate"] = (["energy_unit", "hourly_time"], hourly_rates)
         
-        dataset = dataset.assign_coords({"month": months})
+        dataset = dataset.assign_coords({"month": months, "energy_unit": [unit.id for unit in units]})
         #print(dataset)
         return dataset
 
