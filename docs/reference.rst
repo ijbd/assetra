@@ -151,7 +151,7 @@ Capacity Accreditation
 ----------------------
 *EffectiveLoadCarryingCapability* quantifies the contribution of an addition to an energy system. Two marginal metrics, *MarginalEffectiveLoadCarryingCapability* (marginal ELCC) and *MarginalReliabilityImpact* (MRI), instead accredit resources that are already in the system, using those resources' own sampled outages. Both follow the gradient-based capacity accreditation framework of Zhang et al. [4]_: they enlarge the resources by a small step and measure how resource adequacy responds.
 
-* *Marginal ELCC* is the largest constant load that the system can carry, with the resources enlarged by the step, while its resource adequacy stays no worse than the baseline (Definition 1 of [4]_), divided by the step.
+* *Marginal ELCC* is the largest constant load that can be added to the system, with the resources enlarged by the step, while its resource adequacy stays no worse than the baseline (Definition 1 of [4]_), divided by the step.
 * *MRI* is the change in resource adequacy when the resources are enlarged by the step, relative to the change when a perfect resource of the same size is added. A perfect resource adds the step in every trial and hour.
 
 As shown in [4]_, the two coincide under *ExpectedUnservedEnergy* in the limit of a small step; at a finite step, and in computational cost, they can differ.
@@ -212,7 +212,7 @@ N_p, the number of resource adequacy evaluations with the resources perturbed, i
 
 * *Own outages.* The base system is sampled once per *evaluate()* call, and the resources' output is split out of those same draws, so every perturbed evaluation reuses the resources' own outages (common random numbers) instead of an independent copy of them. Each call samples afresh and nothing is cached between calls: seed numpy's random number generator for reproducible results.
 * *Scaling.* Enlarging the resources by a step scales the output of their static, stochastic and hydro units by 1 + step / nameplate, where nameplate is the total nameplate capacity of the resources. For their storage units, :code:`charge_rate`, :code:`discharge_rate`, :code:`charge_capacity` and :code:`nameplate_capacity` are scaled by the same factor, while the initial state of charge (a fraction) and the efficiency are unchanged.
-* *Responsive units.* Responsive units are dispatched again in every evaluation, including those with a perfect resource, so that they respond to the change.
+* *Responsive units.* Responsive units are dispatched again in every evaluation, including the evaluations with a perfect resource, so that they respond to the change.
 * *Non-responsive units.* Non-responsive units are not dispatched again: units outside the resources keep their sampled output, including hydro units dispatched after the resources, and hydro units within the resources are not re-dispatched against each other's scaled output.
 * *Added load.* The constant load of the marginal ELCC is added after the non-responsive units and before the responsive units are dispatched, as in *EffectiveLoadCarryingCapability*.
 * *Plateaus.* *LossOfLoadHours* and *LossOfLoadDays* change in steps, so risk can stay at its baseline level over a range of loads. The marginal ELCC does not search across such a plateau: if risk is at its baseline level at the upper end of the search bracket, that end is returned, even when the plateau extends well beyond the step.

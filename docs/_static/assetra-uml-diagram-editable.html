@@ -136,11 +136,11 @@ classDiagram
     }
     class MarginalEffectiveLoadCarryingCapability {
         +evaluate(EnergySystem resources) float
-        +perturbation_count int
+        +perturbation_count : int
     }
     class MarginalReliabilityImpact {
         +evaluate(EnergySystem resources) float
-        +perturbation_count int
+        +perturbation_count : int
     }
 
     ResourceContributionMetric <|-- EffectiveLoadCarryingCapability
