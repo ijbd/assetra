@@ -346,26 +346,29 @@ def _find_largest_root(
       returned: either the exact root, or a plateau where g is 0, which the
       search does not cross.
 
-    Bisection then halves the bracket until its width is at most tolerance,
-    and returns the midpoint of the final bracket. The secant takes each next
-    point from the secant line through the two most recent points. As in
-    Dekker's method, it takes a bisection step instead when the denominator
-    is 0, when the point is not strictly inside the bracket, or when the
-    previous step did not halve the bracket, which bounds the cost at about
-    twice that of bisection. A step from the latest point shorter than
-    tolerance / 2 becomes a step of tolerance / 2 towards the far end of the
-    bracket, so that the bracket closes from both sides. It stops when the
-    width of the bracket is at most tolerance, returning its midpoint, or,
-    with exact_root, as soon as g is within zero_tolerance of 0, returning
-    that point. It is capped at _MAX_ITERATIONS iterations, past which
-    RuntimeWarning is raised.
+    Bisection then halves the bracket and returns the midpoint of the final
+    bracket. The secant takes each next point from the secant line through
+    the two most recent points. As in Dekker's method, it takes a bisection
+    step instead when the denominator is 0, when the point is not strictly
+    inside the bracket, or when the previous step did not halve the bracket,
+    which bounds the cost at about twice that of bisection. A step from the
+    latest point shorter than tolerance / 2 becomes a step of tolerance / 2
+    towards the far end of the bracket, so that the bracket closes from both
+    sides. Both return the midpoint of the bracket once its width is at most
+    tolerance, or once it cannot be split in floating point (its midpoint is
+    not strictly inside it), which is as tight as it can get when tolerance is
+    finer than the spacing of floating-point numbers at the root. The secant
+    also stops, with exact_root, as soon as g is within zero_tolerance of 0,
+    returning that point. It is capped at _MAX_ITERATIONS iterations, past
+    which RuntimeWarning is raised.
 
     Args:
         g (Callable[[float], float]): Non-decreasing function. Every call
             counts as one evaluation.
         upper (float): Upper end of the initial bracket [0, upper], greater
             than 0, which is also the first step of its expansion.
-        tolerance (float): Width of the bracket at which the search stops.
+        tolerance (float): Width of the bracket at which the search stops, if
+            floating point allows a bracket that narrow.
         method (str): "bisection" or "secant".
         guaranteed (bool): Whether g(0) <= zero_tolerance <= g(upper) is
             guaranteed, so that bisection can start from [0, upper] without
@@ -451,9 +454,13 @@ def _find_largest_root(
         if abs(g_hi) <= zero_tolerance:
             return hi, evaluations
 
+    # both methods stop, with the midpoint, once the bracket cannot be split:
+    # lo and hi are adjacent floating-point numbers, as tight as it can get
     if method == "bisection":
         while hi - lo > tolerance:
             midpoint = (lo + hi) / 2
+            if not lo < midpoint < hi:
+                break
             if evaluate(midpoint) <= zero_tolerance:
                 lo = midpoint
             else:
@@ -465,6 +472,9 @@ def _find_largest_root(
     bisect_next = False
     iterations = 0
     while hi - lo > tolerance:
+        midpoint = (lo + hi) / 2
+        if not lo < midpoint < hi:
+            break
         if iterations == _MAX_ITERATIONS:
             message = (
                 f"The root search did not converge in {_MAX_ITERATIONS} "
@@ -477,11 +487,11 @@ def _find_largest_root(
 
         (c1, g1), (c2, g2) = points[-2:]
         if bisect_next or g1 == g2:
-            c = (lo + hi) / 2
+            c = midpoint
         else:
             c = c2 - g2 * (c2 - c1) / (g2 - g1)
         if not lo < c < hi:
-            c = (lo + hi) / 2
+            c = midpoint
         elif abs(c - c2) < tolerance / 2:
             # the latest point is an end of the bracket: step away from it
             far_end = lo if c2 == hi else hi

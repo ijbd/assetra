@@ -2455,10 +2455,11 @@ class TestAssetraMarginalContribution(unittest.TestCase):
                     _find_largest_root(recorded(lambda c: value, calls), 1, 0.01, method, False, 0.0, False)
                 self.assertEqual([0, 1] + expansions, calls, msg=f"{method} {value}")
 
-        # the secant also gives up, after _MAX_ITERATIONS steps, when the bracket never closes (a zero tolerance)
+        # the secant also gives up, after _MAX_ITERATIONS steps, when the bracket never closes: with the root at 0, where
+        # floating-point numbers are finest, the bracket [0, 2**-k] can still be split and a zero tolerance is out of reach
         calls = []
         with self.assertLogs("assetra.contribution", "ERROR"), self.assertRaisesRegex(RuntimeWarning, "converge"):
-            _find_largest_root(recorded(lambda c: 2 * c - 1.5, calls), 1, 0.0, "secant", False, 1.5e-8, False)
+            _find_largest_root(recorded(lambda c: 2 * c, calls), 1, 0.0, "secant", False, 0.0, False)
         self.assertEqual(2 + _MAX_ITERATIONS, len(calls))
 
     def test_root_secant_steep_convex(self):
@@ -2475,6 +2476,23 @@ class TestAssetraMarginalContribution(unittest.TestCase):
                 self.assertEqual(7, evaluations, msg=method)
             else:
                 self.assertLessEqual(evaluations, 16, msg=method)
+
+    def test_root_float_resolution(self):
+        from assetra.contribution import _find_largest_root, _MAX_ITERATIONS
+
+        def g(c):
+            calls.append(c)
+            if len(calls) > 1000:  # a search that does not stop would hang the suite
+                self.fail("the search did not stop at floating-point resolution")
+            return 2 * c - 1.5
+
+        # a tolerance below the spacing of floating-point numbers around the root cannot be met: once the bracket cannot be
+        # split (its midpoint is not strictly inside it), both methods return that midpoint instead of looping or raising
+        for method, limit in (("bisection", 70), ("secant", _MAX_ITERATIONS + 2)):
+            calls = []
+            root, evaluations = _find_largest_root(g, 1, 1e-20, method, True, 0.0, False)
+            self.assertAlmostEqual(0.75, root, delta=1e-12, msg=method)
+            self.assertLessEqual(evaluations, limit, msg=method)
 
 #new -- hydrounit tests 
 from assetra.units import HydroUnit
